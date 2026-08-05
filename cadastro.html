@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro</title>
+<link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <img src="img/logo-01.png" class="logo">
+
+    <h4>CLUB <span>VRUM</span></h4>
+    <p>Crie sua conta</p>
+
+    <input type="text" id="nome" placeholder="Nome completo">
+
+    <input type="email" id="email" placeholder="E-mail">
+
+    <input type="password" id="senha" placeholder="Senha">
+
+<input type="password" id="confirmarSenha" placeholder="Confirmar senha">
+
+<button onclick="cadastrar()">
+    CADASTRAR
+</button>
+
+    <button class="cadastro-btn" onclick="window.location.href='login.html'">
+        VOLTAR
+    </button>
+
+</div>
+
+<script src="cadastro.js"></script>
+
+</body>
+</html>

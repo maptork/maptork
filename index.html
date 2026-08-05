@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CLUB VRUM</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+    
+<div class="brand">CLUB <span>VRUM</span></div>
+<nav class="nav">
+<button class="active" onclick="showPage('inicio',this)">⌂ &nbsp; Início</button>
+<button onclick="showPage('manuais',this)">▤ &nbsp; Manuais</button>
+<button onclick="showPage('diagnostico',this)">◉ &nbsp; Diagnóstico</button>
+<button onclick="showPage('esquemas',this)">⌁ &nbsp; Esquemas</button>
+<button onclick="showPage('suporte',this)">◌ &nbsp; Suporte</button>
+<button onclick="showPage('conta',this)">♙ &nbsp; Conta</button>
+</nav>
+</aside>
+
+<main class="main">
+<div class="top">
+<div class="user">● Mecânico</div>
+<input id="search" class="search" placeholder="⌕  Buscar marca, modelo, sistema..." oninput="filterBrands()">
+</div>
+
+<section id="inicio" class="page">
+<div class="hero">
+    <img src="img/logo.png" class="logo" alt=""><p></p>
+<div><h1>CLUB <span>VRUM</span></h1><p>Plataforma premium para mecânicos de motos. Manuais, diagnóstico, esquemas elétricos e conteúdo técnico em um só lugar.</p><button class="cta" onclick="openPage('manuais',1)">ACESSAR MANUAIS</button></div>
+<div class="hero-art">VRUM</div>
+</div>
+<div class="section"><h2>Marcas</h2><div class="grid" id="brands">
+<div class="card" data-key="honda"><img src="img/honda.png" class="marcas" alt=""><div class="brand-name">HONDA</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="yamaha"><img src="img/yamaha.png" class="marcas" alt=""><div class="brand-name">YAMAHA</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="suzuki"><img src="img/suzuki.png" class="marcas" alt=""><div class="brand-name">SUZUKI</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="bmw"><img src="img/bmw.png" class="marcas" alt=""><div class="brand-name">BMW</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="ktm"><img src="img/ktm.png" class="marcas" alt=""><div class="brand-name">KTM</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="ducati"><img src="img/ducati.png" class="marcas" alt=""><div class="brand-name">DUCATI</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="triumph"><img src="img/triumph.png" class="marcas" alt=""><div class="brand-name">TRIUMPH</div><small class="muted">Manuais e diagnóstico</small></div>
+<div class="card" data-key="harley"><img src="img/harley.png" class="marcas" alt=""><div class="brand-name">HARLEY</div><small class="muted">Manuais e diagnóstico</small></div>
+</div></div>
+<div class="price"><div><strong>R$ 30,00</strong><small>Acesso vitalício • pagamento único</small></div><button class="cta" onclick="alert('Área de pagamento demonstrativa. Integre seu checkout aqui.')">QUERO ACESSO AGORA</button></div>
+</section>
+
+
+
+
+
+
+
+<section
+id="manuais"
+class="page"
+style="display:none"
+>
+
+
+
+<div class="card drive-search">
+
+<div class="field">
+<img src="img/caixa-01.png" class="logo" alt="">
+
+<label for="driveSearch">
+<h4>Atenção: É necessário possuir uma conta no Google Drive para armazenar e gerenciar os manuais. Após criar sua conta, você poderá fazer o upload dos arquivos.</h4><p>
+    Buscar manual no Google Drive
+  </p>
+
+</label>
+
+<input
+id="driveSearch"
+placeholder="Ex.: Honda-cb-300"
+onkeydown="if(event.key==='Enter') searchDrive()"
+>
+
+</div>
+
+
+<button
+class="cta"
+onclick="searchDrive()"
+>
+BUSCAR PDFs
+</button>
+
+
+<div
+id="driveStatus"
+class="diagnostic-result"
+>
+</div>
+
+<div
+    id="driveResults"
+    class="drive-results"
+>
+</div>
+
+</div>
+
+</section>
+
+
+
+
+
+
+<section id="diagnostico" class="page" style="display:none">
+<h1>Diagnóstico</h1><p>Selecione uma marca e modelo para iniciar uma consulta técnica.</p>
+<div class="card form-card">
+<div class="field"><label for="marca">Marca da motocicleta</label>
+<select id="marca" onchange="loadModels()"><option value="">Selecione uma marca...</option><option>Honda</option><option>Yamaha</option><option>Suzuki</option><option>BMW</option><option>KTM</option><option>Ducati</option><option>Triumph</option><option>Harley-Davidson</option></select></div>
+<div class="field"><label for="modelo">Modelo</label>
+<select id="modelo" disabled><option value="">Primeiro selecione a marca...</option></select></div>
+<button class="cta" onclick="startDiagnostic()">INICIAR DIAGNÓSTICO</button>
+<div id="result" class="diagnostic-result"></div>
+</div>
+</section>
+
+<section id="esquemas" class="page" style="display:none"><h1>Esquemas Elétricos</h1><p>Acesso organizado aos esquemas por marca e modelo.</p><div class="grid"><div class="card"><b>⚡ Injeção eletrônica</b><p>Diagramas e conexões.</p></div><div class="card"><b>⚡ Sistema de carga</b><p>Alternador e regulador.</p></div><div class="card"><b>⚡ Partida</b><p>Relés e motor de partida.</p></div></div></section>
+
+<section id="suporte" class="page" style="display:none"><h1>Suporte Técnico</h1><p>Central de atendimento e orientação para membros.</p><div class="card"><h3>Precisa de ajuda?</h3><p>Entre em contato pelo WhatsApp para atendimento.</p><button class="cta" onclick="window.open('https://wa.me/5561995906710','_blank')">ABRIR WHATSAPP</button></div></section>
+
+<section id="conta" class="page" style="display:none"><h1>Minha Conta</h1><div class="card"><h3>Acesso vitalício</h3><p>Plano ativo • Pagamento único</p><button class="cta">GERENCIAR ACESSO</button></div></section>
+
+<div class="footer">CLUB VRUM • Plataforma Premium • Produto digital</div>
+</main>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
