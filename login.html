@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login • CLUB VRUM</title>
+
+<link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <img src="img/logo-01.png" class="logo" alt="Club Vrum">
+
+    <h4>CLUB <span>VRUM</span></h4>
+    <p>Área exclusiva para membros.</p>
+
+<form onsubmit="login(); return false;">
+
+ <input type="email" id="email" placeholder="E-mail" required>
+
+<input type="password" id="senha" placeholder="Senha" required>
+
+    <button type="submit">
+        ENTRAR
+    </button>
+    <button
+    class="cadastro-btn"
+    type="button"
+    onclick="window.location.href='cadastro.html'">
+    CRIAR CONTA
+</button>
+
+</form>
+
+<script src="login.js"></script>
+
+   <a href="#" onclick="recuperarSenha(); return false;">
+    Esqueci minha senha
+</a>
+
+</div>
+
+</body>
+</html>
