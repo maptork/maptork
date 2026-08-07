@@ -161,3 +161,62 @@ margin-right: 0;
 
 
 
+
+
+/* PAINEL ADMINISTRATIVO */
+.admin-toolbar{
+  margin-top:20px;
+  max-width:700px;
+}
+
+.admin-users{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:15px;
+  margin-top:20px;
+}
+
+.admin-user-card h3{
+  margin-top:0;
+  word-break:break-word;
+}
+
+.admin-user-card p{
+  margin:8px 0;
+  word-break:break-word;
+}
+
+.admin-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:15px;
+}
+
+.admin-actions .cta{
+  flex:1;
+  min-width:120px;
+}
+
+.admin-secondary{
+  background:#29292d;
+}
+
+.admin-secondary:hover{
+  background:#3a3a40;
+}
+
+@media(max-width:420px){
+  .admin-users{
+    grid-template-columns:1fr;
+  }
+
+  .admin-actions{
+    display:block;
+  }
+
+  .admin-actions .cta{
+    width:100%;
+    margin-top:8px;
+  }
+}

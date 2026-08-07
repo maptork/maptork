@@ -45,27 +45,84 @@
         localStorage.setItem("nome", dados.nome);
       }
 
-      document.documentElement.classList.remove("auth-pendente");
+      if (dados.email) {
+        localStorage.setItem("email", dados.email);
+      }
 
-      window.addEventListener("DOMContentLoaded", function () {
+      window.usuarioAtual = {
+        nome: dados.nome || localStorage.getItem("nome") || "",
+        email: dados.email || localStorage.getItem("email") || "",
+        admin: dados.admin === true
+      };
+
+      const atualizarUsuario = function () {
+        const nome = window.usuarioAtual.nome || "Usuário";
         const usuarioNome = document.getElementById("usuarioNome");
+        const contaNome = document.getElementById("contaNome");
+        const contaEmail = document.getElementById("contaEmail");
+        const adminMenuBtn = document.getElementById("adminMenuBtn");
+
         if (usuarioNome) {
-          usuarioNome.textContent = dados.nome || "Usuário";
+          usuarioNome.textContent = "Bem-vindo, " + nome;
         }
-      });
+
+        if (contaNome) {
+          contaNome.textContent = nome;
+        }
+
+        if (contaEmail) {
+          contaEmail.textContent = window.usuarioAtual.email || "";
+        }
+
+        if (adminMenuBtn) {
+          adminMenuBtn.style.display =
+            window.usuarioAtual.admin ? "block" : "none";
+        }
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          atualizarUsuario,
+          { once: true }
+        );
+      } else {
+        atualizarUsuario();
+      }
+
+      document.documentElement.classList.remove("auth-pendente");
 
     } catch (erro) {
       console.error("Erro ao verificar sessão:", erro);
       localStorage.removeItem("token");
       localStorage.removeItem("nome");
+      localStorage.removeItem("email");
       window.location.replace("login.html");
     }
   }
 
-  function sair() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("nome");
-    window.location.replace("login.html");
+  async function sair() {
+    const token = localStorage.getItem("token");
+
+    try {
+      if (token) {
+        const form = new FormData();
+        form.append("action", "logout");
+        form.append("token", token);
+
+        await fetch(AUTH_API, {
+          method: "POST",
+          body: form
+        });
+      }
+    } catch (erro) {
+      console.error("Erro ao encerrar sessão no servidor:", erro);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("nome");
+      localStorage.removeItem("email");
+      window.location.replace("login.html");
+    }
   }
 
   verificarSessao();
@@ -76,7 +133,7 @@
 <div class="app">
 <aside class="sidebar">
     
-<div class="brand">CLUB <span>VRUM</span></div>
+<div class="brand">MAP<span>TORK</span></div>
 <nav class="nav">
 <button class="active" onclick="showPage('inicio',this)">⌂ &nbsp; Início</button>
 <button onclick="showPage('manuais',this)">▤ &nbsp; Manuais</button>
@@ -84,6 +141,7 @@
 <button onclick="showPage('esquemas',this)">⌁ &nbsp; Esquemas</button>
 <button onclick="showPage('suporte',this)">◌ &nbsp; Suporte</button>
 <button onclick="showPage('conta',this)">♙ &nbsp; Conta</button>
+<button id="adminMenuBtn" style="display:none" onclick="abrirAdmin(this)">⚙ &nbsp; Admin</button>
 </nav>
 </aside>
 
@@ -96,7 +154,7 @@
 <section id="inicio" class="page">
 <div class="hero">
     <img src="img/logo.png" class="logo" alt=""><p></p>
-<div><h1>CLUB <span>VRUM</span></h1><p>Plataforma premium para mecânicos de motos. Manuais, diagnóstico, esquemas elétricos e conteúdo técnico em um só lugar.</p><button class="cta" onclick="openPage('manuais',1)">ACESSAR MANUAIS</button></div>
+<div><h1>MAP<span>TORK</span></h1><p>Plataforma premium para mecânicos de motos. Manuais, diagnóstico, esquemas elétricos e conteúdo técnico em um só lugar.</p><button class="cta" onclick="openPage('manuais',1)">ACESSAR MANUAIS</button></div>
 <div class="hero-art">VRUM</div>
 </div>
 <div class="section"><h2>Marcas</h2><div class="grid" id="brands">
@@ -109,7 +167,7 @@
 <div class="card" data-key="triumph"><img src="img/triumph.png" class="marcas" alt=""><div class="brand-name">TRIUMPH</div><small class="muted">Manuais e diagnóstico</small></div>
 <div class="card" data-key="harley"><img src="img/harley.png" class="marcas" alt=""><div class="brand-name">HARLEY</div><small class="muted">Manuais e diagnóstico</small></div>
 </div></div>
-<div class="price"><div><strong>R$ 30,00</strong><small>Acesso vitalício • pagamento único</small></div><button class="cta" onclick="alert('Área de pagamento demonstrativa. Integre seu checkout aqui.')">QUERO ACESSO AGORA</button></div>
+<div class="price"><div><strong>R$ 30,00</strong><small>Acesso vitalício • pagamento único</small></div><button class="cta" type="button" onclick="mostrarPagamentoPendente()">QUERO ACESSO AGORA</button></div>
 </section>
 
 
@@ -192,9 +250,88 @@ class="diagnostic-result"
 
 <section id="suporte" class="page" style="display:none"><h1>Suporte Técnico</h1><p>Central de atendimento e orientação para membros.</p><div class="card"><h3>Precisa de ajuda?</h3><p>Entre em contato pelo WhatsApp para atendimento.</p><button class="cta" onclick="window.open('https://wa.me/5561995906710','_blank')">ABRIR WHATSAPP</button></div></section>
 
-<section id="conta" class="page" style="display:none"><h1>Minha Conta</h1><div class="card"><h3>Acesso vitalício</h3><p>Plano ativo • Pagamento único</p><button class="cta">GERENCIAR ACESSO</button><button class="cta" type="button" onclick="sair()" style="margin-top:10px">SAIR</button></div></section>
 
-<div class="footer">CLUB VRUM • Plataforma Premium • Produto digital</div>
+<section id="conta" class="page" style="display:none">
+  <h1>Minha Conta</h1>
+
+  <div class="card form-card">
+    <h3>Dados da conta</h3>
+    <p><strong>Nome:</strong> <span id="contaNome">Carregando...</span></p>
+    <p><strong>E-mail:</strong> <span id="contaEmail">Carregando...</span></p>
+  </div>
+
+  <div class="card form-card">
+    <h3>Alterar senha</h3>
+
+    <div class="field">
+      <label for="senhaAtual">Senha atual</label>
+      <input type="password" id="senhaAtual" placeholder="Digite sua senha atual">
+    </div>
+
+    <div class="field">
+      <label for="novaSenha">Nova senha</label>
+      <input type="password" id="novaSenha" placeholder="Mínimo de 8 caracteres">
+    </div>
+
+    <div class="field">
+      <label for="confirmarNovaSenha">Confirmar nova senha</label>
+      <input type="password" id="confirmarNovaSenha" placeholder="Repita a nova senha">
+    </div>
+
+    <button class="cta" id="btnAlterarSenha" type="button" onclick="alterarSenhaConta()">
+      ALTERAR SENHA
+    </button>
+
+    <div id="contaMensagem" class="diagnostic-result"></div>
+  </div>
+
+  <div class="card form-card">
+    <button class="cta" type="button" onclick="sair()">
+      SAIR DA CONTA
+    </button>
+  </div>
+</section>
+
+
+
+<section id="admin" class="page" style="display:none">
+  <h1>Painel Administrativo</h1>
+  <p>Gerenciamento de usuários do MAPTORK.</p>
+
+  <div class="card admin-toolbar">
+    <button class="cta" type="button" onclick="carregarUsuariosAdmin()">ATUALIZAR USUÁRIOS</button>
+    <div id="adminMensagem" class="diagnostic-result"></div>
+  </div>
+
+  <div id="adminSenhaBox" class="card form-card" style="display:none">
+    <h3>Redefinir senha</h3>
+    <p>Usuário: <strong id="adminSenhaEmail"></strong></p>
+
+    <div class="field">
+      <label for="adminNovaSenha">Nova senha</label>
+      <input type="password" id="adminNovaSenha" placeholder="Mínimo de 8 caracteres">
+    </div>
+
+    <div class="field">
+      <label for="adminConfirmarSenha">Confirmar nova senha</label>
+      <input type="password" id="adminConfirmarSenha" placeholder="Repita a nova senha">
+    </div>
+
+    <button class="cta" id="adminSalvarSenhaBtn" type="button" onclick="salvarNovaSenhaAdmin()">
+      SALVAR E ENVIAR POR E-MAIL
+    </button>
+
+    <button class="cta admin-secondary" type="button" onclick="cancelarSenhaAdmin()" style="margin-top:10px">
+      CANCELAR
+    </button>
+
+    <div id="adminSenhaMensagem" class="diagnostic-result"></div>
+  </div>
+
+  <div id="adminUsuarios" class="admin-users"></div>
+</section>
+
+<div class="footer">MAPTORK • Plataforma Premium • Produto digital</div>
 </main>
 </div>
 
