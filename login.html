@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login • CLUB VRUM</title>
+<title>Login • MAPTORK</title>
 
 <link rel="stylesheet" href="login.css">
 </head>
@@ -14,14 +14,31 @@
 
     <img src="img/logo-01.png" class="logo" alt="Club Vrum">
 
-    <h4>CLUB <span>VRUM</span></h4>
+    <h4>MAP<span>TORK</span></h4>
     <p>Área exclusiva para membros.</p>
 
 <form onsubmit="login(); return false;">
 
  <input type="email" id="email" placeholder="E-mail" required>
 
-<input type="password" id="senha" placeholder="Senha" required>
+<div class="senha-box">
+    <input type="password" id="senha" placeholder="Senha" required>
+    
+<span class="btn-olho" onclick="mostrarSenha()">
+    <svg id="iconeOlho" xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         stroke-width="2"
+         stroke-linecap="round"
+         stroke-linejoin="round">
+
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+        <circle cx="12" cy="12" r="3"/>
+
+    </svg>
+</span>
+</div>
 
     <button type="submit">
         ENTRAR
@@ -34,12 +51,14 @@
 </button>
 
 </form>
+<div id="mensagem" class="mensagem"></div>
 
 <script src="login.js"></script>
 
    <a href="#" onclick="recuperarSenha(); return false;">
     Esqueci minha senha
 </a>
+
 
 </div>
 

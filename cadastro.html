@@ -13,20 +13,61 @@
 
     <img src="img/logo-01.png" class="logo">
 
-    <h4>CLUB <span>VRUM</span></h4>
+    <h4>MAP<span>TORK</span></h4>
     <p>Crie sua conta</p>
 
     <input type="text" id="nome" placeholder="Nome completo">
 
     <input type="email" id="email" placeholder="E-mail">
 
+  <div class="senha-box">
     <input type="password" id="senha" placeholder="Senha">
 
-<input type="password" id="confirmarSenha" placeholder="Confirmar senha">
+    <span class="btn-olho" onclick="mostrarSenha('senha','iconeSenha')">
+        <svg id="iconeSenha"
+             xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round"
+             stroke-linejoin="round">
+
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+
+        </svg>
+    </span>
+</div>
+
+<div class="senha-box">
+    <input type="password" id="confirmarSenha" placeholder="Confirmar senha">
+
+    <span class="btn-olho" onclick="mostrarSenha('confirmarSenha','iconeConfirmar')">
+        <svg id="iconeConfirmar"
+             xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round"
+             stroke-linejoin="round">
+
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+
+        </svg>
+    </span>
+</div>
 
 <button onclick="cadastrar()">
     CADASTRAR
 </button>
+
+
+<div id="mensagem" class="mensagem"></div>
+
+
 
     <button class="cadastro-btn" onclick="window.location.href='login.html'">
         VOLTAR

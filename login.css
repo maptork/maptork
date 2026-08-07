@@ -114,3 +114,79 @@ a:hover{
     color:#fff;
 }
 
+.mensagem{
+    display: none;
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.mensagem.sucesso{
+    display: block;
+    background: #0f5132;
+    color: #ffffff;
+    border: 1px solid #198754;
+}
+
+.mensagem.erro{
+    display: block;
+    background: #5c1111;
+    color: #ffffff;
+    border: 1px solid #dc3545;
+}
+
+.senha-box {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.senha-box input {
+    margin-bottom: 0;
+    padding-right: 45px;
+}
+
+.btn-olho{
+    position:absolute;
+    right:14px;
+    top:50%;
+    transform:translateY(-50%);
+    width:20px;
+    height:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#9aa0a6;
+    cursor:pointer;
+    z-index:2;
+}
+
+.btn-olho svg{
+    width:20px;
+    height:20px;
+    stroke:currentColor;
+}
+.btn-olho svg {
+    width: 18px;
+    height: 18px;
+    stroke: #9aa0a6;
+}
+
+.btn-olho {
+    color: #9aa0a6;
+}
+
+.btn-olho svg {
+    stroke: currentColor;
+}
+
+.btn-olho:hover{
+    color:#ffffff;
+}
+
+.btn-olho:hover svg {
+    stroke: #ffffff;
+}

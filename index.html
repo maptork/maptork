@@ -5,6 +5,72 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CLUB VRUM</title>
 <link rel="stylesheet" href="style.css">
+
+<style>
+  html.auth-pendente body {
+    visibility: hidden;
+  }
+</style>
+
+<script>
+  const AUTH_API = "https://script.google.com/macros/s/AKfycbzScIhxB1v7f5DVtT0-p38tX2ppKj1H1kckl04aZOU3qHkcma_w10oZ-wZ5I32QTcnK/exec";
+  document.documentElement.classList.add("auth-pendente");
+
+  async function verificarSessao() {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      window.location.replace("login.html");
+      return;
+    }
+
+    try {
+      const resposta = await fetch(
+        AUTH_API +
+        "?action=verificarToken&token=" +
+        encodeURIComponent(token),
+        { cache: "no-store" }
+      );
+
+      const dados = await resposta.json();
+
+      if (!dados.ok) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("nome");
+        window.location.replace("login.html");
+        return;
+      }
+
+      if (dados.nome) {
+        localStorage.setItem("nome", dados.nome);
+      }
+
+      document.documentElement.classList.remove("auth-pendente");
+
+      window.addEventListener("DOMContentLoaded", function () {
+        const usuarioNome = document.getElementById("usuarioNome");
+        if (usuarioNome) {
+          usuarioNome.textContent = dados.nome || "Usuário";
+        }
+      });
+
+    } catch (erro) {
+      console.error("Erro ao verificar sessão:", erro);
+      localStorage.removeItem("token");
+      localStorage.removeItem("nome");
+      window.location.replace("login.html");
+    }
+  }
+
+  function sair() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("nome");
+    window.location.replace("login.html");
+  }
+
+  verificarSessao();
+</script>
+
 </head>
 <body>
 <div class="app">
@@ -23,15 +89,15 @@
 
 <main class="main">
 <div class="top">
-<div class="user">● Mecânico</div>
+<div class="user">● <span id="usuarioNome">Usuário</span></div>
 <input id="search" class="search" placeholder="⌕  Buscar marca, modelo, sistema..." oninput="filterBrands()">
 </div>
 
 <section id="inicio" class="page">
 <div class="hero">
     <img src="img/logo.png" class="logo" alt=""><p></p>
-<div><h1>MAP <span>TORK</span></h1><p>Plataforma premium para mecânicos de motos. Manuais, diagnóstico, esquemas elétricos e conteúdo técnico em um só lugar.</p><button class="cta" onclick="openPage('manuais',1)">ACESSAR MANUAIS</button></div>
-<div class="hero-art">TORK</div>
+<div><h1>CLUB <span>VRUM</span></h1><p>Plataforma premium para mecânicos de motos. Manuais, diagnóstico, esquemas elétricos e conteúdo técnico em um só lugar.</p><button class="cta" onclick="openPage('manuais',1)">ACESSAR MANUAIS</button></div>
+<div class="hero-art">VRUM</div>
 </div>
 <div class="section"><h2>Marcas</h2><div class="grid" id="brands">
 <div class="card" data-key="honda"><img src="img/honda.png" class="marcas" alt=""><div class="brand-name">HONDA</div><small class="muted">Manuais e diagnóstico</small></div>
@@ -126,7 +192,7 @@ class="diagnostic-result"
 
 <section id="suporte" class="page" style="display:none"><h1>Suporte Técnico</h1><p>Central de atendimento e orientação para membros.</p><div class="card"><h3>Precisa de ajuda?</h3><p>Entre em contato pelo WhatsApp para atendimento.</p><button class="cta" onclick="window.open('https://wa.me/5561995906710','_blank')">ABRIR WHATSAPP</button></div></section>
 
-<section id="conta" class="page" style="display:none"><h1>Minha Conta</h1><div class="card"><h3>Acesso vitalício</h3><p>Plano ativo • Pagamento único</p><button class="cta">GERENCIAR ACESSO</button></div></section>
+<section id="conta" class="page" style="display:none"><h1>Minha Conta</h1><div class="card"><h3>Acesso vitalício</h3><p>Plano ativo • Pagamento único</p><button class="cta">GERENCIAR ACESSO</button><button class="cta" type="button" onclick="sair()" style="margin-top:10px">SAIR</button></div></section>
 
 <div class="footer">CLUB VRUM • Plataforma Premium • Produto digital</div>
 </main>
