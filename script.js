@@ -1,599 +1,1621 @@
-const models={
-"Honda":["CB 300F 2023","CG 160 Titan","CB 500F","XRE 300"],
-"Yamaha":["Fazer FZ25","MT-03","MT-07","Lander 250"],
-"Suzuki":["GS 500","V-Strom 650","Hayabusa"],
-"BMW":["G 310 R","F 750 GS","R 1250 GS"],
-"KTM":["390 Duke","790 Duke","1290 Super Duke"],
-"Ducati":["Monster","Panigale V2","Multistrada"],
-"Triumph":["Tiger 900","Street Triple","Bonneville"],
-"Harley-Davidson":["Iron 883","Sportster S","Fat Bob"]
+// ======================================================
+// MAPTORK - SCRIPT PRINCIPAL
+// ======================================================
+
+
+// ======================================================
+// MODELOS
+// ======================================================
+
+const models = {
+  "Honda": [
+    "CB 300F 2023",
+    "CG 160 Titan",
+    "CB 500F",
+    "XRE 300"
+  ],
+
+  "Yamaha": [
+    "Fazer FZ25",
+    "MT-03",
+    "MT-07",
+    "Lander 250"
+  ],
+
+  "Suzuki": [
+    "GS 500",
+    "V-Strom 650",
+    "Hayabusa"
+  ],
+
+  "BMW": [
+    "G 310 R",
+    "F 750 GS",
+    "R 1250 GS"
+  ],
+
+  "KTM": [
+    "390 Duke",
+    "790 Duke",
+    "1290 Super Duke"
+  ],
+
+  "Ducati": [
+    "Monster",
+    "Panigale V2",
+    "Multistrada"
+  ],
+
+  "Triumph": [
+    "Tiger 900",
+    "Street Triple",
+    "Bonneville"
+  ],
+
+  "Harley-Davidson": [
+    "Iron 883",
+    "Sportster S",
+    "Fat Bob"
+  ]
 };
-function showPage(id,btn){
-document.querySelectorAll('.page').forEach(p=>p.style.display='none');
-document.getElementById(id).style.display='block';
-document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-if(btn)btn.classList.add('active');
-window.scrollTo({top:0,behavior:'smooth'});
-}
-function openPage(id,index){showPage(id,document.querySelectorAll('.nav button')[index]);}
-function filterBrands(){
-const q=document.getElementById('search').value.toLowerCase().trim();
-document.querySelectorAll('#brands .card').forEach(c=>c.style.display=(!q||c.dataset.key.includes(q))?'block':'none');
-}
-function loadModels(){
-const marca=document.getElementById('marca').value;
-const select=document.getElementById('modelo');
-select.innerHTML='';
-if(!marca){select.disabled=true;select.innerHTML='<option value="">Primeiro selecione a marca...</option>';return;}
-select.disabled=false;
-select.innerHTML='<option value="">Selecione um modelo...</option>';
-models[marca].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;select.appendChild(o);});
-document.getElementById('result').style.display='none';
-}
-function startDiagnostic(){
-const marca=document.getElementById('marca').value;
-const modelo=document.getElementById('modelo').value;
-const result=document.getElementById('result');
-if(!marca||!modelo){result.style.display='block';result.textContent='Selecione a marca e o modelo antes de iniciar o diagnóstico.';return;}
-result.style.display='block';
-result.innerHTML='<b>Diagnóstico iniciado!</b><br><span style="color:#aaa">Consulta selecionada: '+marca+' '+modelo+'.</span>';
+
+
+// ======================================================
+// NAVEGAÇÃO
+// ======================================================
+
+function showPage(id, btn) {
+
+  document
+    .querySelectorAll(".page")
+    .forEach(function(pagina) {
+      pagina.style.display = "none";
+    });
+
+
+  const pagina =
+    document.getElementById(id);
+
+
+  if (pagina) {
+    pagina.style.display = "block";
+  }
+
+
+  document
+    .querySelectorAll(".nav button")
+    .forEach(function(botao) {
+      botao.classList.remove("active");
+    });
+
+
+  if (btn) {
+    btn.classList.add("active");
+  }
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 }
 
-const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbyl-iiZwaurAe2P1lyyNKeN6-C4yhITvAYrkMv7pGDNctmIcyvW0OI9keTOzNss5iim/exec";
 
-async function searchDrive() {
-  
-  const input = document.getElementById("driveSearch");
-  const status = document.getElementById("driveStatus");
-  const results = document.getElementById("driveResults");
-  
-  const q = input.value.trim();
-  
-  if (!q) {
-    status.style.display = "block";
-    status.innerHTML = "Digite a marca ou modelo.";
-    results.innerHTML = "";
+function openPage(id, index) {
+
+  const botoes =
+    document.querySelectorAll(
+      ".nav button"
+    );
+
+
+  showPage(
+    id,
+    botoes[index]
+  );
+}
+
+
+// ======================================================
+// FILTRO DE MARCAS
+// ======================================================
+
+function filterBrands() {
+
+  const input =
+    document.getElementById(
+      "search"
+    );
+
+
+  if (!input) {
     return;
   }
-  
-  
-  
-  
-  
-  
-  status.style.display = "block";
-status.innerHTML = " Pesquisando no Google Drive...";
 
-results.innerHTML = `
-<div class="pdf-card" style="text-align:center;padding:30px">
-    <div class="loader"></div>
-    <p>Pesquisando arquivos...</p>
-</div>
-`;
-  
-  
-  
-  
-  
-  try {
-    
-    const response = await fetch(
-      DRIVE_API_URL + "?q=" + encodeURIComponent(q)
-    );
-    
-    const data = await response.json();
-    
-    if (!data.ok || !data.files.length) {
-  status.innerHTML = "Nenhum PDF encontrado.";
-  results.innerHTML = "";
-  return;
-}
-    
-    status.innerHTML = data.files.length + " arquivo(s) encontrado(s).";
-    
-    results.innerHTML = "";
-    
-    data.files.forEach(file => {
-      
-      results.innerHTML += `
-            <div class="card">
-                <h3>${file.name}</h3>
 
-                <button class="cta"
-                    onclick="openPdf('${file.url}')">
-                    ABRIR PDF
-                </button>
-            </div>
-            `;
-      
+  const q =
+    input.value
+      .toLowerCase()
+      .trim();
+
+
+  document
+    .querySelectorAll(
+      "#brands .card"
+    )
+    .forEach(function(card) {
+
+      const chave =
+        String(
+          card.dataset.key || ""
+        );
+
+
+      card.style.display =
+        !q ||
+        chave.includes(q)
+          ? "block"
+          : "none";
     });
-    
-  } catch (e) {
-    
-    status.innerHTML = "Erro ao pesquisar.";
-    
-  }
-  
 }
 
-// ===================================
-// ACESSO AOS MANUAIS / ASSINATURA
-// ===================================
+
+// ======================================================
+// CARREGAR MODELOS
+// ======================================================
+
+function loadModels() {
+
+  const marcaEl =
+    document.getElementById(
+      "marca"
+    );
+
+
+  const select =
+    document.getElementById(
+      "modelo"
+    );
+
+
+  if (
+    !marcaEl ||
+    !select
+  ) {
+    return;
+  }
+
+
+  const marca =
+    marcaEl.value;
+
+
+  select.innerHTML = "";
+
+
+  if (!marca) {
+
+    select.disabled = true;
+
+    select.innerHTML =
+      '<option value="">Primeiro selecione a marca...</option>';
+
+    return;
+  }
+
+
+  select.disabled = false;
+
+  select.innerHTML =
+    '<option value="">Selecione um modelo...</option>';
+
+
+  const lista =
+    models[marca] || [];
+
+
+  lista.forEach(function(modelo) {
+
+    const option =
+      document.createElement(
+        "option"
+      );
+
+
+    option.value = modelo;
+
+    option.textContent = modelo;
+
+    select.appendChild(option);
+  });
+
+
+  const resultado =
+    document.getElementById(
+      "result"
+    );
+
+
+  if (resultado) {
+    resultado.style.display = "none";
+  }
+}
+
+
+// ======================================================
+// DIAGNÓSTICO
+// ======================================================
+
+function startDiagnostic() {
+
+  const marcaEl =
+    document.getElementById(
+      "marca"
+    );
+
+
+  const modeloEl =
+    document.getElementById(
+      "modelo"
+    );
+
+
+  const result =
+    document.getElementById(
+      "result"
+    );
+
+
+  if (
+    !marcaEl ||
+    !modeloEl ||
+    !result
+  ) {
+    return;
+  }
+
+
+  const marca =
+    marcaEl.value;
+
+
+  const modelo =
+    modeloEl.value;
+
+
+  if (
+    !marca ||
+    !modelo
+  ) {
+
+    result.style.display = "block";
+
+    result.textContent =
+      "Selecione a marca e o modelo antes de iniciar o diagnóstico.";
+
+    return;
+  }
+
+
+  result.style.display = "block";
+
+  result.innerHTML =
+    "<b>Diagnóstico iniciado!</b><br>" +
+    '<span style="color:#aaa">' +
+    "Consulta selecionada: " +
+    marca +
+    " " +
+    modelo +
+    ".</span>";
+}
+
+
+// ======================================================
+// GOOGLE DRIVE
+// ======================================================
+
+const DRIVE_API_URL =
+  "https://script.google.com/macros/s/AKfycbyl-iiZwaurAe2P1lyyNKeN6-C4yhITvAYrkMv7pGDNctmIcyvW0OI9keTOzNss5iim/exec";
+
+
+// ======================================================
+// PESQUISAR MANUAIS
+// ======================================================
+
+async function searchDrive() {
+
+  const input =
+    document.getElementById(
+      "driveSearch"
+    );
+
+
+  const status =
+    document.getElementById(
+      "driveStatus"
+    );
+
+
+  const results =
+    document.getElementById(
+      "driveResults"
+    );
+
+
+  if (
+    !input ||
+    !status ||
+    !results
+  ) {
+    return;
+  }
+
+
+  const q =
+    input.value.trim();
+
+
+  if (!q) {
+
+    status.style.display = "block";
+
+    status.innerHTML =
+      "Digite a marca ou modelo.";
+
+    results.innerHTML = "";
+
+    return;
+  }
+
+
+  status.style.display = "block";
+
+  status.innerHTML =
+    "Pesquisando no Google Drive...";
+
+
+  results.innerHTML = `
+    <div
+      class="pdf-card"
+      style="text-align:center;padding:30px"
+    >
+      <div class="loader"></div>
+
+      <p>
+        Pesquisando arquivos...
+      </p>
+    </div>
+  `;
+
+
+  try {
+
+    const response =
+      await fetch(
+        DRIVE_API_URL +
+        "?q=" +
+        encodeURIComponent(q)
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !data.ok ||
+      !data.files ||
+      !data.files.length
+    ) {
+
+      status.innerHTML =
+        "Nenhum PDF encontrado.";
+
+      results.innerHTML = "";
+
+      return;
+    }
+
+
+    status.innerHTML =
+      data.files.length +
+      " arquivo(s) encontrado(s).";
+
+
+    results.innerHTML = "";
+
+
+    data.files.forEach(function(file) {
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+
+      card.className =
+        "card";
+
+
+      const titulo =
+        document.createElement(
+          "h3"
+        );
+
+
+      titulo.textContent =
+        file.name || "Manual";
+
+
+      const botao =
+        document.createElement(
+          "button"
+        );
+
+
+      botao.className =
+        "cta";
+
+
+      botao.textContent =
+        "ABRIR PDF";
+
+
+      botao.onclick =
+        function() {
+
+          openPdf(
+            file.url
+          );
+        };
+
+
+      card.appendChild(
+        titulo
+      );
+
+
+      card.appendChild(
+        botao
+      );
+
+
+      results.appendChild(
+        card
+      );
+    });
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao pesquisar:",
+      erro
+    );
+
+
+    status.innerHTML =
+      "Erro ao pesquisar.";
+  }
+}
+
+
+// ======================================================
+// ASSINATURA ATUAL
+// ======================================================
 
 let assinaturaAtual = {
   carregada: false,
   ativo: false,
   plano: null,
   diasRestantes: 0,
-  vencimento: ""
+  vencimento: "",
+  status: ""
 };
 
+
+// ======================================================
+// EMAIL DO USUÁRIO
+// ======================================================
+
 function obterEmailUsuario() {
+
   return String(
-    (window.usuarioAtual && window.usuarioAtual.email) ||
-    localStorage.getItem("email") ||
+    (
+      window.usuarioAtual &&
+      window.usuarioAtual.email
+    )
+    ||
+    localStorage.getItem(
+      "email"
+    )
+    ||
     ""
-  ).trim().toLowerCase();
+  )
+    .trim()
+    .toLowerCase();
 }
 
+
+// ======================================================
+// API DAS ASSINATURAS
+// ======================================================
+
 function obterApiAssinaturas() {
-  // O MAPTORK já usa o mesmo Google Apps Script da conta.
-  // Se no futuro separar as APIs, basta definir window.ASSINATURAS_API_URL.
-  if (window.ASSINATURAS_API_URL) return window.ASSINATURAS_API_URL;
-  if (typeof AUTH_API !== "undefined") return AUTH_API;
+
+  if (
+    window.ASSINATURAS_API_URL
+  ) {
+    return window.ASSINATURAS_API_URL;
+  }
+
+
+  if (
+    typeof AUTH_API !==
+    "undefined"
+  ) {
+    return AUTH_API;
+  }
+
+
   return DRIVE_API_URL;
 }
 
+
+// ======================================================
+// CONSULTAR ASSINATURA
+// ======================================================
+
 async function consultarAssinatura() {
-  const email = obterEmailUsuario();
+
+  const email =
+    obterEmailUsuario();
+
 
   if (!email) {
+
     assinaturaAtual = {
       carregada: true,
       ativo: false,
       plano: null,
       diasRestantes: 0,
-      vencimento: ""
+      vencimento: "",
+      status: "SEM_PLANO"
     };
+
+
     return assinaturaAtual;
   }
 
-  try {
-    const api = obterApiAssinaturas();
-    const resposta = await fetch(
-      api +
-      "?acao=verificarPlano&email=" +
-      encodeURIComponent(email) +
-      "&_t=" + Date.now(),
-      { cache: "no-store" }
-    );
 
-    const dados = await resposta.json();
+  try {
+
+    const api =
+      obterApiAssinaturas();
+
+
+    const resposta =
+      await fetch(
+        api +
+        "?acao=verificarPlano" +
+        "&email=" +
+        encodeURIComponent(email) +
+        "&_t=" +
+        Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const dados =
+      await resposta.json();
+
 
     assinaturaAtual = {
       carregada: true,
       ativo: dados.ativo === true,
       plano: dados.plano || null,
-      diasRestantes: Number(dados.diasRestantes || 0),
-      vencimento: dados.vencimento || "",
-      status: dados.status || ""
+      diasRestantes:
+        Number(
+          dados.diasRestantes || 0
+        ),
+      vencimento:
+        dados.vencimento || "",
+      status:
+        dados.status || ""
     };
 
+
     return assinaturaAtual;
+
+
   } catch (erro) {
-    console.error("Erro ao consultar assinatura:", erro);
-    assinaturaAtual.carregada = true;
+
+    console.error(
+      "Erro ao consultar assinatura:",
+      erro
+    );
+
+
+    assinaturaAtual.carregada =
+      true;
+
+
     return assinaturaAtual;
   }
 }
 
-async function openPdf(url) {
-  // Guarda o manual para conseguir voltar nele após o pagamento.
-  localStorage.setItem("maptork_manual_pendente", url);
 
-  const assinatura = assinaturaAtual.carregada
-    ? assinaturaAtual
-    : await consultarAssinatura();
+// ======================================================
+// ABRIR PDF
+// ======================================================
+
+async function openPdf(url) {
+
+  localStorage.setItem(
+    "maptork_manual_pendente",
+    url
+  );
+
+
+  const assinatura =
+    assinaturaAtual.carregada
+      ? assinaturaAtual
+      : await consultarAssinatura();
+
 
   if (assinatura.ativo) {
-    localStorage.removeItem("maptork_manual_pendente");
-    window.open(url, "_blank");
+
+    localStorage.removeItem(
+      "maptork_manual_pendente"
+    );
+
+
+    window.open(
+      url,
+      "_blank"
+    );
+
+
     return;
   }
+
 
   mostrarMensagemPagamento(
     "Você precisa de um plano ativo para abrir este manual. Escolha um plano abaixo.",
     false
   );
 
-  const navAssinaturas = document.querySelectorAll('.nav button')[2];
-  showPage('assinaturas', navAssinaturas);
+
+  const navAssinaturas =
+    document
+      .querySelectorAll(
+        ".nav button"
+      )[2];
+
+
+  showPage(
+    "assinaturas",
+    navAssinaturas
+  );
 }
 
 
-
-// ===================================
+// ======================================================
 // MINHA CONTA - ALTERAR SENHA
-// ===================================
+// ======================================================
 
 async function alterarSenhaConta() {
-  
-  const token = localStorage.getItem("token");
-  
-  const senhaAtual =
-    document.getElementById("senhaAtual").value.trim();
-  
-  const novaSenha =
-    document.getElementById("novaSenha").value.trim();
-  
-  const confirmarSenha =
-    document.getElementById("confirmarNovaSenha").value.trim();
-  
+
+  const token =
+    localStorage.getItem(
+      "token"
+    );
+
+
+  const senhaAtualEl =
+    document.getElementById(
+      "senhaAtual"
+    );
+
+
+  const novaSenhaEl =
+    document.getElementById(
+      "novaSenha"
+    );
+
+
+  const confirmarSenhaEl =
+    document.getElementById(
+      "confirmarNovaSenha"
+    );
+
+
   const mensagem =
-    document.getElementById("contaMensagem");
-  
+    document.getElementById(
+      "contaMensagem"
+    );
+
+
   const botao =
-    document.getElementById("btnAlterarSenha");
-  
-  
-  // ===================================
-  // FUNÇÃO PARA MOSTRAR MENSAGEM
-  // ===================================
-  
-  function mostrarContaMensagem(texto, sucesso) {
-    
-    mensagem.style.display = "block";
-    
-    mensagem.className = sucesso ?
-      "diagnostic-result success-box" :
-      "diagnostic-result error-box";
-    
-    mensagem.textContent = texto;
-  }
-  
-  
-  // ===================================
-  // VERIFICAR LOGIN
-  // ===================================
-  
-  if (!token) {
-    
-    window.location.href = "login.html";
-    
+    document.getElementById(
+      "btnAlterarSenha"
+    );
+
+
+  if (
+    !senhaAtualEl ||
+    !novaSenhaEl ||
+    !confirmarSenhaEl
+  ) {
     return;
   }
-  
-  
-  // ===================================
-  // CAMPOS OBRIGATÓRIOS
-  // ===================================
-  
+
+
+  const senhaAtual =
+    senhaAtualEl.value.trim();
+
+
+  const novaSenha =
+    novaSenhaEl.value.trim();
+
+
+  const confirmarSenha =
+    confirmarSenhaEl.value.trim();
+
+
+  function mostrarContaMensagem(
+    texto,
+    sucesso
+  ) {
+
+    if (!mensagem) {
+      return;
+    }
+
+
+    mensagem.style.display =
+      "block";
+
+
+    mensagem.className =
+      sucesso
+        ? "diagnostic-result success-box"
+        : "diagnostic-result error-box";
+
+
+    mensagem.textContent =
+      texto;
+  }
+
+
+  if (!token) {
+
+    window.location.href =
+      "login.html";
+
+    return;
+  }
+
+
   if (
     !senhaAtual ||
     !novaSenha ||
     !confirmarSenha
   ) {
-    
+
     mostrarContaMensagem(
       "Preencha todos os campos.",
       false
     );
-    
+
     return;
   }
-  
-  
-  // ===================================
-  // TAMANHO DA NOVA SENHA
-  // ===================================
-  
-  if (novaSenha.length < 8) {
-    
+
+
+  if (
+    novaSenha.length < 8
+  ) {
+
     mostrarContaMensagem(
       "A nova senha deve possuir pelo menos 8 caracteres.",
       false
     );
-    
+
     return;
   }
-  
-  
-  // ===================================
-  // CONFIRMAR NOVA SENHA
-  // ===================================
-  
-  if (novaSenha !== confirmarSenha) {
-    
+
+
+  if (
+    novaSenha !==
+    confirmarSenha
+  ) {
+
     mostrarContaMensagem(
       "As novas senhas não coincidem.",
       false
     );
-    
+
     return;
   }
-  
-  
-  // ===================================
-  // DESATIVAR BOTÃO
-  // ===================================
-  
-  botao.disabled = true;
-  
-  botao.textContent = "Aguarde...";
-  
-  
+
+
+  if (botao) {
+
+    botao.disabled = true;
+
+    botao.textContent =
+      "Aguarde...";
+  }
+
+
   try {
-    
-    const form = new FormData();
-    
+
+    const form =
+      new FormData();
+
+
     form.append(
       "action",
       "alterarSenha"
     );
-    
+
+
     form.append(
       "token",
       token
     );
-    
+
+
     form.append(
       "senhaAtual",
       senhaAtual
     );
-    
+
+
     form.append(
       "novaSenha",
       novaSenha
     );
-    
+
+
     form.append(
       "confirmarSenha",
       confirmarSenha
     );
-    
-    
-    // AUTH_API já existe no index.html
-    const resposta = await fetch(
-      AUTH_API,
-      {
-        method: "POST",
-        body: form
-      }
-    );
-    
-    
+
+
+    const resposta =
+      await fetch(
+        AUTH_API,
+        {
+          method: "POST",
+          body: form
+        }
+      );
+
+
     const dados =
       await resposta.json();
-    
-    
-    // ===================================
-    // ERRO
-    // ===================================
-    
+
+
     if (!dados.ok) {
-      
+
       mostrarContaMensagem(
         dados.mensagem ||
         "Não foi possível alterar a senha.",
         false
       );
-      
+
       return;
     }
-    
-    
-    // ===================================
-    // SUCESSO
-    // ===================================
-    
+
+
     mostrarContaMensagem(
       dados.mensagem ||
       "Senha alterada com sucesso.",
       true
     );
-    
-    
-    // Apaga sessão do navegador
-    localStorage.removeItem("token");
-    
-    localStorage.removeItem("nome");
-    
-    
-    // Volta para login
-    setTimeout(() => {
-      
-      window.location.href =
-        "login.html";
-      
-    }, 1500);
-    
-    
+
+
+    localStorage.removeItem(
+      "token"
+    );
+
+    localStorage.removeItem(
+      "nome"
+    );
+
+    localStorage.removeItem(
+      "email"
+    );
+
+
+    setTimeout(
+      function() {
+
+        window.location.href =
+          "login.html";
+
+      },
+      1500
+    );
+
+
   } catch (erro) {
-    
-    console.error(erro);
-    
+
+    console.error(
+      erro
+    );
+
+
     mostrarContaMensagem(
       "Erro ao conectar ao servidor.",
       false
     );
-    
-    
+
+
   } finally {
-    
-    botao.disabled = false;
-    
-    botao.textContent =
-      "ALTERAR SENHA";
+
+    if (botao) {
+
+      botao.disabled = false;
+
+      botao.textContent =
+        "ALTERAR SENHA";
+    }
   }
 }
 
-// ===================================
-// PAINEL ADMINISTRATIVO
-// ===================================
 
-let adminEmailSelecionado = "";
+// ======================================================
+// EXCLUIR MINHA CONTA
+// ======================================================
 
-async function abrirAdmin(botao) {
+async function excluirMinhaConta() {
 
-  if (!window.usuarioAtual || !window.usuarioAtual.admin) {
+  const token =
+    localStorage.getItem(
+      "token"
+    );
+
+
+  if (!token) {
+
+    window.location.href =
+      "login.html";
+
     return;
   }
 
-  showPage("admin", botao);
+
+  const primeiraConfirmacao =
+    window.confirm(
+      "Tem certeza que deseja excluir sua conta?\n\n" +
+      "Sua conta e sua assinatura serão removidas.\n" +
+      "Esta ação não poderá ser desfeita."
+    );
+
+
+  if (!primeiraConfirmacao) {
+    return;
+  }
+
+
+  const segundaConfirmacao =
+    window.confirm(
+      "CONFIRMAÇÃO FINAL\n\n" +
+      "Deseja realmente excluir sua conta do MAPTORK?"
+    );
+
+
+  if (!segundaConfirmacao) {
+    return;
+  }
+
+
+  const botao =
+    document.getElementById(
+      "btnExcluirConta"
+    );
+
+
+  const mensagem =
+    document.getElementById(
+      "excluirContaMensagem"
+    );
+
+
+  if (botao) {
+
+    botao.disabled = true;
+
+    botao.textContent =
+      "EXCLUINDO...";
+  }
+
+
+  if (mensagem) {
+
+    mensagem.style.display =
+      "block";
+
+    mensagem.className =
+      "diagnostic-result";
+
+    mensagem.textContent =
+      "Excluindo sua conta...";
+  }
+
+
+  try {
+
+    const form =
+      new FormData();
+
+
+    form.append(
+      "action",
+      "excluirMinhaConta"
+    );
+
+
+    form.append(
+      "token",
+      token
+    );
+
+
+    const resposta =
+      await fetch(
+        AUTH_API,
+        {
+          method: "POST",
+          body: form
+        }
+      );
+
+
+    const dados =
+      await resposta.json();
+
+
+    if (!dados.ok) {
+
+      if (mensagem) {
+
+        mensagem.className =
+          "diagnostic-result error-box";
+
+        mensagem.textContent =
+          dados.mensagem ||
+          "Não foi possível excluir sua conta.";
+      }
+
+
+      if (botao) {
+
+        botao.disabled = false;
+
+        botao.textContent =
+          "EXCLUIR MINHA CONTA";
+      }
+
+
+      return;
+    }
+
+
+    if (mensagem) {
+
+      mensagem.className =
+        "diagnostic-result success-box";
+
+      mensagem.textContent =
+        "Conta excluída com sucesso.";
+    }
+
+
+    localStorage.removeItem(
+      "token"
+    );
+
+    localStorage.removeItem(
+      "nome"
+    );
+
+    localStorage.removeItem(
+      "email"
+    );
+
+    localStorage.removeItem(
+      "maptork_manual_pendente"
+    );
+
+    localStorage.removeItem(
+      "maptork_pedido_pendente"
+    );
+
+    localStorage.removeItem(
+      "maptork_plano_pendente"
+    );
+
+
+    setTimeout(
+      function() {
+
+        window.location.replace(
+          "login.html"
+        );
+
+      },
+      1200
+    );
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao excluir conta:",
+      erro
+    );
+
+
+    if (mensagem) {
+
+      mensagem.className =
+        "diagnostic-result error-box";
+
+      mensagem.textContent =
+        "Erro ao conectar ao servidor.";
+    }
+
+
+    if (botao) {
+
+      botao.disabled = false;
+
+      botao.textContent =
+        "EXCLUIR MINHA CONTA";
+    }
+  }
+}
+
+
+// ======================================================
+// PAINEL ADMINISTRATIVO
+// ======================================================
+
+let adminEmailSelecionado =
+  "";
+
+
+// ======================================================
+// ABRIR ADMIN
+// ======================================================
+
+async function abrirAdmin(botao) {
+
+  if (
+    !window.usuarioAtual ||
+    !window.usuarioAtual.admin
+  ) {
+    return;
+  }
+
+
+  showPage(
+    "admin",
+    botao
+  );
+
+
   cancelarSenhaAdmin();
+
+
+  await carregarPrecosPlanos();
+
   await carregarUsuariosAdmin();
 }
 
 
-function mostrarAdminMensagem(texto, sucesso) {
+// ======================================================
+// MENSAGEM ADMIN
+// ======================================================
 
-  const msg = document.getElementById("adminMensagem");
+function mostrarAdminMensagem(
+  texto,
+  sucesso
+) {
 
-  if (!msg) return;
+  const msg =
+    document.getElementById(
+      "adminMensagem"
+    );
 
-  msg.style.display = "block";
 
-  msg.className = sucesso
-    ? "diagnostic-result success-box"
-    : "diagnostic-result error-box";
+  if (!msg) {
+    return;
+  }
 
-  msg.textContent = texto;
+
+  msg.style.display =
+    "block";
+
+
+  msg.className =
+    sucesso
+      ? "diagnostic-result success-box"
+      : "diagnostic-result error-box";
+
+
+  msg.textContent =
+    texto;
 }
 
 
-function mostrarAdminSenhaMensagem(texto, sucesso) {
+// ======================================================
+// MENSAGEM SENHA ADMIN
+// ======================================================
 
-  const msg = document.getElementById("adminSenhaMensagem");
+function mostrarAdminSenhaMensagem(
+  texto,
+  sucesso
+) {
 
-  if (!msg) return;
+  const msg =
+    document.getElementById(
+      "adminSenhaMensagem"
+    );
 
-  msg.style.display = "block";
 
-  msg.className = sucesso
-    ? "diagnostic-result success-box"
-    : "diagnostic-result error-box";
+  if (!msg) {
+    return;
+  }
 
-  msg.textContent = texto;
+
+  msg.style.display =
+    "block";
+
+
+  msg.className =
+    sucesso
+      ? "diagnostic-result success-box"
+      : "diagnostic-result error-box";
+
+
+  msg.textContent =
+    texto;
 }
 
+
+// ======================================================
+// CARREGAR USUÁRIOS ADMIN
+// MOSTRA PLANO + VENCIMENTO + DIAS
+// ======================================================
 
 async function carregarUsuariosAdmin() {
 
-  const token = localStorage.getItem("token");
-  const area = document.getElementById("adminUsuarios");
+  const token =
+    localStorage.getItem(
+      "token"
+    );
 
-  if (!token || !area) return;
+
+  const area =
+    document.getElementById(
+      "adminUsuarios"
+    );
+
+
+  if (
+    !token ||
+    !area
+  ) {
+    return;
+  }
+
 
   area.innerHTML = `
-    <div class="card" style="text-align:center">
+    <div
+      class="card"
+      style="text-align:center"
+    >
       <div class="loader"></div>
-      <p>Carregando usuários...</p>
+
+      <p>
+        Carregando usuários...
+      </p>
     </div>
   `;
 
+
   try {
 
-    const resposta = await fetch(
-      AUTH_API +
-      "?action=adminListarUsuarios&token=" +
-      encodeURIComponent(token),
-      { cache: "no-store" }
-    );
+    const resposta =
+      await fetch(
+        AUTH_API +
+        "?action=adminListarUsuarios" +
+        "&token=" +
+        encodeURIComponent(token) +
+        "&_t=" +
+        Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
 
-    const dados = await resposta.json();
+
+    const dados =
+      await resposta.json();
+
 
     if (!dados.ok) {
 
       area.innerHTML = "";
 
+
       mostrarAdminMensagem(
-        dados.mensagem || "Acesso administrativo negado.",
+        dados.mensagem ||
+        "Acesso administrativo negado.",
         false
       );
+
 
       return;
     }
 
+
     mostrarAdminMensagem(
-      dados.usuarios.length + " usuário(s) encontrado(s).",
+      dados.usuarios.length +
+      " usuário(s) encontrado(s).",
       true
     );
 
+
     area.innerHTML = "";
 
-    dados.usuarios.forEach(usuario => {
 
-      const card = document.createElement("div");
+    dados.usuarios.forEach(
+      function(usuario) {
 
-      card.className = "card admin-user-card";
+        const card =
+          document.createElement(
+            "div"
+          );
 
-      const status =
-        usuario.status === "bloqueado"
-          ? "Bloqueado"
-          : "Ativo";
 
-      const novoStatus =
-        usuario.status === "bloqueado"
-          ? "ativo"
-          : "bloqueado";
+        card.className =
+          "card admin-user-card";
 
-      const textoStatus =
-        usuario.status === "bloqueado"
-          ? "ATIVAR"
-          : "BLOQUEAR";
 
-      card.innerHTML = `
-        <h3>${escapeHtml(usuario.nome || "")}</h3>
+        const statusConta =
+          usuario.status ===
+          "bloqueado"
+            ? "Bloqueado"
+            : "Ativo";
 
-        <p>
-          <strong>E-mail:</strong>
-          ${escapeHtml(usuario.email || "")}
-        </p>
 
-        <p>
-          <strong>Tipo:</strong>
-          ${escapeHtml(usuario.tipo || "cliente")}
-        </p>
+        const novoStatus =
+          usuario.status ===
+          "bloqueado"
+            ? "ativo"
+            : "bloqueado";
 
-        <p>
-          <strong>Status:</strong>
-          ${status}
-        </p>
 
-        <div class="admin-actions">
+        const textoStatus =
+          usuario.status ===
+          "bloqueado"
+            ? "ATIVAR"
+            : "BLOQUEAR";
 
-          <button
-            class="cta"
-            type="button"
-            onclick="alterarStatusUsuarioAdmin(
-              '${encodeURIComponent(usuario.email)}',
-              '${novoStatus}'
-            )"
+
+        let planoTexto =
+          "Sem plano";
+
+
+        let statusPlano =
+          "SEM PLANO";
+
+
+        let vencimentoTexto =
+          "-";
+
+
+        let diasTexto =
+          "-";
+
+
+        if (usuario.plano) {
+
+          planoTexto =
+            usuario.plano;
+
+
+          vencimentoTexto =
+            usuario.vencimento ||
+            "-";
+
+
+          if (
+            usuario.assinaturaAtiva
+          ) {
+
+            statusPlano =
+              "ATIVO";
+
+
+            const dias =
+              Number(
+                usuario.diasRestantes ||
+                0
+              );
+
+
+            diasTexto =
+              dias === 1
+                ? "1 dia"
+                : dias + " dias";
+
+          } else {
+
+            statusPlano =
+              "VENCIDO";
+
+            diasTexto =
+              "0 dias";
+          }
+        }
+
+
+        card.innerHTML = `
+
+          <h3>
+            ${escapeHtml(
+              usuario.nome || ""
+            )}
+          </h3>
+
+
+          <p>
+            <strong>
+              E-mail:
+            </strong>
+
+            ${escapeHtml(
+              usuario.email || ""
+            )}
+          </p>
+
+
+          <p>
+            <strong>
+              Tipo:
+            </strong>
+
+            ${escapeHtml(
+              usuario.tipo ||
+              "cliente"
+            )}
+          </p>
+
+
+          <p>
+            <strong>
+              Conta:
+            </strong>
+
+            ${statusConta}
+          </p>
+
+
+          <hr
+            style="
+              border:0;
+              border-top:1px solid rgba(255,255,255,.1);
+              margin:14px 0;
+            "
           >
-            ${textoStatus}
-          </button>
 
-          <button
-            class="cta admin-secondary"
-            type="button"
-            onclick="abrirRedefinirSenhaAdmin(
-              '${encodeURIComponent(usuario.email)}'
-            )"
-          >
-            REDEFINIR SENHA
-          </button>
 
-        </div>
-      `;
+          <p>
+            <strong>
+              Plano:
+            </strong>
 
-      area.appendChild(card);
-    });
+            ${escapeHtml(
+              planoTexto
+            )}
+          </p>
+
+
+          <p>
+            <strong>
+              Assinatura:
+            </strong>
+
+            ${escapeHtml(
+              statusPlano
+            )}
+          </p>
+
+
+          <p>
+            <strong>
+              Vencimento:
+            </strong>
+
+            ${escapeHtml(
+              vencimentoTexto
+            )}
+          </p>
+
+
+          <p>
+            <strong>
+              Dias restantes:
+            </strong>
+
+            ${escapeHtml(
+              diasTexto
+            )}
+          </p>
+
+
+          <div class="admin-actions">
+
+            <button
+              class="cta"
+              type="button"
+              onclick="
+                alterarStatusUsuarioAdmin(
+                  '${encodeURIComponent(
+                    usuario.email
+                  )}',
+                  '${novoStatus}'
+                )
+              "
+            >
+              ${textoStatus}
+            </button>
+
+
+            <button
+              class="cta admin-secondary"
+              type="button"
+              onclick="
+                abrirRedefinirSenhaAdmin(
+                  '${encodeURIComponent(
+                    usuario.email
+                  )}'
+                )
+              "
+            >
+              REDEFINIR SENHA
+            </button>
+
+          </div>
+        `;
+
+
+        area.appendChild(
+          card
+        );
+      }
+    );
+
 
   } catch (erro) {
 
-    console.error(erro);
+    console.error(
+      "Erro admin:",
+      erro
+    );
+
 
     area.innerHTML = "";
+
 
     mostrarAdminMensagem(
       "Erro ao conectar ao servidor.",
@@ -602,53 +1624,99 @@ async function carregarUsuariosAdmin() {
   }
 }
 
+
+// ======================================================
+// ADMIN - ALTERAR STATUS
+// ======================================================
 
 async function alterarStatusUsuarioAdmin(
   emailCodificado,
   novoStatus
 ) {
 
-  const token = localStorage.getItem("token");
-  const email = decodeURIComponent(emailCodificado);
+  const token =
+    localStorage.getItem(
+      "token"
+    );
 
-  const form = new FormData();
 
-  form.append("action", "adminAlterarStatus");
-  form.append("token", token);
-  form.append("email", email);
-  form.append("status", novoStatus);
+  const email =
+    decodeURIComponent(
+      emailCodificado
+    );
+
+
+  const form =
+    new FormData();
+
+
+  form.append(
+    "action",
+    "adminAlterarStatus"
+  );
+
+
+  form.append(
+    "token",
+    token
+  );
+
+
+  form.append(
+    "email",
+    email
+  );
+
+
+  form.append(
+    "status",
+    novoStatus
+  );
+
 
   mostrarAdminMensagem(
-    novoStatus === "bloqueado"
+    novoStatus ===
+    "bloqueado"
       ? "Bloqueando usuário..."
       : "Ativando usuário...",
     true
   );
 
+
   try {
 
-    const resposta = await fetch(
-      AUTH_API,
-      {
-        method: "POST",
-        body: form
-      }
-    );
+    const resposta =
+      await fetch(
+        AUTH_API,
+        {
+          method: "POST",
+          body: form
+        }
+      );
 
-    const dados = await resposta.json();
+
+    const dados =
+      await resposta.json();
+
 
     mostrarAdminMensagem(
       dados.mensagem,
       dados.ok
     );
 
+
     if (dados.ok) {
+
       await carregarUsuariosAdmin();
     }
 
+
   } catch (erro) {
 
-    console.error(erro);
+    console.error(
+      erro
+    );
+
 
     mostrarAdminMensagem(
       "Erro ao conectar ao servidor.",
@@ -658,43 +1726,79 @@ async function alterarStatusUsuarioAdmin(
 }
 
 
+// ======================================================
+// ADMIN - ABRIR REDEFINIÇÃO DE SENHA
+// ======================================================
+
 function abrirRedefinirSenhaAdmin(
   emailCodificado
 ) {
 
   adminEmailSelecionado =
-    decodeURIComponent(emailCodificado);
+    decodeURIComponent(
+      emailCodificado
+    );
+
 
   const box =
-    document.getElementById("adminSenhaBox");
+    document.getElementById(
+      "adminSenhaBox"
+    );
+
 
   const emailEl =
-    document.getElementById("adminSenhaEmail");
+    document.getElementById(
+      "adminSenhaEmail"
+    );
+
 
   const senha =
-    document.getElementById("adminNovaSenha");
+    document.getElementById(
+      "adminNovaSenha"
+    );
+
 
   const confirmar =
-    document.getElementById("adminConfirmarSenha");
+    document.getElementById(
+      "adminConfirmarSenha"
+    );
+
 
   const msg =
-    document.getElementById("adminSenhaMensagem");
+    document.getElementById(
+      "adminSenhaMensagem"
+    );
+
 
   if (emailEl) {
+
     emailEl.textContent =
       adminEmailSelecionado;
   }
 
-  if (senha) senha.value = "";
-  if (confirmar) confirmar.value = "";
+
+  if (senha) {
+    senha.value = "";
+  }
+
+
+  if (confirmar) {
+    confirmar.value = "";
+  }
+
 
   if (msg) {
+
     msg.style.display = "none";
+
     msg.textContent = "";
   }
 
+
   if (box) {
+
     box.style.display = "block";
+
 
     box.scrollIntoView({
       behavior: "smooth",
@@ -704,29 +1808,57 @@ function abrirRedefinirSenhaAdmin(
 }
 
 
+// ======================================================
+// CANCELAR REDEFINIÇÃO DE SENHA
+// ======================================================
+
 function cancelarSenhaAdmin() {
 
-  adminEmailSelecionado = "";
+  adminEmailSelecionado =
+    "";
+
 
   const box =
-    document.getElementById("adminSenhaBox");
+    document.getElementById(
+      "adminSenhaBox"
+    );
+
 
   const senha =
-    document.getElementById("adminNovaSenha");
+    document.getElementById(
+      "adminNovaSenha"
+    );
+
 
   const confirmar =
-    document.getElementById("adminConfirmarSenha");
+    document.getElementById(
+      "adminConfirmarSenha"
+    );
+
 
   const msg =
-    document.getElementById("adminSenhaMensagem");
+    document.getElementById(
+      "adminSenhaMensagem"
+    );
 
-  if (senha) senha.value = "";
-  if (confirmar) confirmar.value = "";
+
+  if (senha) {
+    senha.value = "";
+  }
+
+
+  if (confirmar) {
+    confirmar.value = "";
+  }
+
 
   if (msg) {
+
     msg.style.display = "none";
+
     msg.textContent = "";
   }
+
 
   if (box) {
     box.style.display = "none";
@@ -734,27 +1866,50 @@ function cancelarSenhaAdmin() {
 }
 
 
+// ======================================================
+// ADMIN - SALVAR NOVA SENHA
+// ======================================================
+
 async function salvarNovaSenhaAdmin() {
 
   const token =
-    localStorage.getItem("token");
+    localStorage.getItem(
+      "token"
+    );
 
-  const novaSenha =
-    document
-      .getElementById("adminNovaSenha")
-      .value
-      .trim();
 
-  const confirmarSenha =
-    document
-      .getElementById("adminConfirmarSenha")
-      .value
-      .trim();
+  const novaSenhaEl =
+    document.getElementById(
+      "adminNovaSenha"
+    );
+
+
+  const confirmarSenhaEl =
+    document.getElementById(
+      "adminConfirmarSenha"
+    );
+
 
   const botao =
     document.getElementById(
       "adminSalvarSenhaBtn"
     );
+
+
+  if (
+    !novaSenhaEl ||
+    !confirmarSenhaEl
+  ) {
+    return;
+  }
+
+
+  const novaSenha =
+    novaSenhaEl.value.trim();
+
+
+  const confirmarSenha =
+    confirmarSenhaEl.value.trim();
 
 
   if (!adminEmailSelecionado) {
@@ -809,10 +1964,13 @@ async function salvarNovaSenhaAdmin() {
   }
 
 
-  botao.disabled = true;
+  if (botao) {
 
-  botao.textContent =
-    "SALVANDO...";
+    botao.disabled = true;
+
+    botao.textContent =
+      "SALVANDO...";
+  }
 
 
   mostrarAdminSenhaMensagem(
@@ -826,25 +1984,30 @@ async function salvarNovaSenhaAdmin() {
     const form =
       new FormData();
 
+
     form.append(
       "action",
       "adminRedefinirSenha"
     );
+
 
     form.append(
       "token",
       token
     );
 
+
     form.append(
       "email",
       adminEmailSelecionado
     );
 
+
     form.append(
       "novaSenha",
       novaSenha
     );
+
 
     form.append(
       "confirmarSenha",
@@ -874,13 +2037,9 @@ async function salvarNovaSenhaAdmin() {
 
     if (dados.ok) {
 
-      document
-        .getElementById("adminNovaSenha")
-        .value = "";
+      novaSenhaEl.value = "";
 
-      document
-        .getElementById("adminConfirmarSenha")
-        .value = "";
+      confirmarSenhaEl.value = "";
 
       await carregarUsuariosAdmin();
     }
@@ -888,7 +2047,10 @@ async function salvarNovaSenhaAdmin() {
 
   } catch (erro) {
 
-    console.error(erro);
+    console.error(
+      erro
+    );
+
 
     mostrarAdminSenhaMensagem(
       "Erro ao conectar ao servidor.",
@@ -898,196 +2060,1171 @@ async function salvarNovaSenhaAdmin() {
 
   } finally {
 
-    botao.disabled = false;
+    if (botao) {
 
-    botao.textContent =
-      "SALVAR E ENVIAR POR E-MAIL";
+      botao.disabled = false;
+
+      botao.textContent =
+        "SALVAR E ENVIAR POR E-MAIL";
+    }
   }
 }
 
+
+// ======================================================
+// ESCAPAR HTML
+// ======================================================
 
 function escapeHtml(texto) {
 
-  return String(texto)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(
+    texto || ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 }
 
 
+// ======================================================
+// PREÇOS DOS PLANOS
+// ======================================================
 
-function mostrarMensagemPagamento(texto, sucesso = null) {
-  const msg = document.getElementById("pagamentoMensagem");
-  if (!msg) return;
+function formatarPrecoPlano(
+  centavos
+) {
 
-  msg.style.display = "block";
-  msg.className = "diagnostic-result";
+  const valor =
+    Number(
+      centavos || 0
+    ) / 100;
 
-  if (sucesso === true) msg.classList.add("success-box");
-  if (sucesso === false) msg.classList.add("error-box");
 
-  msg.textContent = texto;
-}
-
-function esconderMensagemPagamento() {
-  const msg = document.getElementById("pagamentoMensagem");
-  if (msg) msg.style.display = "none";
-}
-
-function normalizarPlano(plano) {
-  return String(plano || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-async function atualizarBotaoPlano() {
-  const botao = document.getElementById("planoTopoBtn");
-  if (!botao) return;
-
-  botao.classList.remove(
-    "plano-mensal",
-    "plano-trimestral",
-    "plano-anual",
-    "sem-plano"
+  return valor.toLocaleString(
+    "pt-BR",
+    {
+      style: "currency",
+      currency: "BRL"
+    }
   );
+}
 
-  botao.textContent = "VERIFICANDO PLANO...";
-  botao.classList.add("sem-plano");
 
-  const assinatura = await consultarAssinatura();
+// ======================================================
+// PREÇO PARA CENTAVOS
+// ======================================================
 
-  botao.classList.remove(
-    "plano-mensal",
-    "plano-trimestral",
-    "plano-anual",
-    "sem-plano"
+function precoParaCentavos(valor) {
+
+  let texto =
+    String(
+      valor || ""
+    )
+      .trim()
+      .replace(
+        /\s/g,
+        ""
+      )
+      .replace(
+        /R\$/gi,
+        ""
+      );
+
+
+  if (
+    texto.includes(",")
+  ) {
+
+    texto =
+      texto
+        .replace(
+          /\./g,
+          ""
+        )
+        .replace(
+          ",",
+          "."
+        );
+  }
+
+
+  const numero =
+    Number(texto);
+
+
+  if (
+    !Number.isFinite(numero) ||
+    numero <= 0
+  ) {
+    return 0;
+  }
+
+
+  return Math.round(
+    numero * 100
   );
+}
 
-  if (!assinatura.ativo) {
-    botao.textContent = "SEM PLANO";
-    botao.classList.add("sem-plano");
+
+// ======================================================
+// MENSAGEM DOS PREÇOS
+// ======================================================
+
+function mostrarMensagemPrecos(
+  texto,
+  sucesso
+) {
+
+  const msg =
+    document.getElementById(
+      "adminPrecosMensagem"
+    );
+
+
+  if (!msg) {
     return;
   }
 
-  const plano = normalizarPlano(assinatura.plano);
-  const dias = Math.max(0, Number(assinatura.diasRestantes || 0));
-  const textoDias = dias === 1 ? "1 DIA" : dias + " DIAS";
 
-  if (plano.includes("trimestral")) {
-    botao.textContent = "TRIMESTRAL • " + textoDias;
-    botao.classList.add("plano-trimestral");
-  } else if (plano.includes("anual")) {
-    botao.textContent = "ANUAL • " + textoDias;
-    botao.classList.add("plano-anual");
-  } else {
-    botao.textContent = "MENSAL • " + textoDias;
-    botao.classList.add("plano-mensal");
+  msg.style.display = "block";
+
+
+  msg.className =
+    sucesso
+      ? "diagnostic-result success-box"
+      : "diagnostic-result error-box";
+
+
+  msg.textContent =
+    texto;
+}
+
+
+// ======================================================
+// CARREGAR PREÇOS
+// ======================================================
+
+async function carregarPrecosPlanos() {
+
+  try {
+
+    const api =
+      obterApiAssinaturas();
+
+
+    const resposta =
+      await fetch(
+        api +
+        "?acao=obterPrecos" +
+        "&_t=" +
+        Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const dados =
+      await resposta.json();
+
+
+    if (
+      !dados.sucesso ||
+      !dados.precos
+    ) {
+      return;
+    }
+
+
+    const mensal =
+      Number(
+        dados.precos.mensal ||
+        3990
+      );
+
+
+    const trimestral =
+      Number(
+        dados.precos.trimestral ||
+        8990
+      );
+
+
+    const anual =
+      Number(
+        dados.precos.anual ||
+        29700
+      );
+
+
+    const precoMensal =
+      document.getElementById(
+        "precoMensal"
+      );
+
+
+    const precoTrimestral =
+      document.getElementById(
+        "precoTrimestral"
+      );
+
+
+    const precoAnual =
+      document.getElementById(
+        "precoAnual"
+      );
+
+
+    if (precoMensal) {
+
+      precoMensal.textContent =
+        formatarPrecoPlano(
+          mensal
+        );
+    }
+
+
+    if (precoTrimestral) {
+
+      precoTrimestral.textContent =
+        formatarPrecoPlano(
+          trimestral
+        );
+    }
+
+
+    if (precoAnual) {
+
+      precoAnual.textContent =
+        formatarPrecoPlano(
+          anual
+        );
+    }
+
+
+    const campoMensal =
+      document.getElementById(
+        "adminPrecoMensal"
+      );
+
+
+    const campoTrimestral =
+      document.getElementById(
+        "adminPrecoTrimestral"
+      );
+
+
+    const campoAnual =
+      document.getElementById(
+        "adminPrecoAnual"
+      );
+
+
+    if (campoMensal) {
+
+      campoMensal.value =
+        (
+          mensal / 100
+        )
+          .toFixed(2)
+          .replace(
+            ".",
+            ","
+          );
+    }
+
+
+    if (campoTrimestral) {
+
+      campoTrimestral.value =
+        (
+          trimestral / 100
+        )
+          .toFixed(2)
+          .replace(
+            ".",
+            ","
+          );
+    }
+
+
+    if (campoAnual) {
+
+      campoAnual.value =
+        (
+          anual / 100
+        )
+          .toFixed(2)
+          .replace(
+            ".",
+            ","
+          );
+    }
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao carregar preços:",
+      erro
+    );
   }
 }
 
+
+// ======================================================
+// ADMIN - SALVAR PREÇOS
+// ======================================================
+
+async function salvarPrecosAdmin() {
+
+  const token =
+    localStorage.getItem(
+      "token"
+    );
+
+
+  if (!token) {
+
+    mostrarMensagemPrecos(
+      "Sessão inválida.",
+      false
+    );
+
+    return;
+  }
+
+
+  const mensalEl =
+    document.getElementById(
+      "adminPrecoMensal"
+    );
+
+
+  const trimestralEl =
+    document.getElementById(
+      "adminPrecoTrimestral"
+    );
+
+
+  const anualEl =
+    document.getElementById(
+      "adminPrecoAnual"
+    );
+
+
+  if (
+    !mensalEl ||
+    !trimestralEl ||
+    !anualEl
+  ) {
+
+    mostrarMensagemPrecos(
+      "Campos dos planos não encontrados.",
+      false
+    );
+
+    return;
+  }
+
+
+  const mensal =
+    precoParaCentavos(
+      mensalEl.value
+    );
+
+
+  const trimestral =
+    precoParaCentavos(
+      trimestralEl.value
+    );
+
+
+  const anual =
+    precoParaCentavos(
+      anualEl.value
+    );
+
+
+  if (
+    mensal <= 0 ||
+    trimestral <= 0 ||
+    anual <= 0
+  ) {
+
+    mostrarMensagemPrecos(
+      "Informe valores válidos.",
+      false
+    );
+
+    return;
+  }
+
+
+  const botao =
+    document.getElementById(
+      "adminSalvarPrecosBtn"
+    );
+
+
+  if (botao) {
+
+    botao.disabled = true;
+
+    botao.textContent =
+      "SALVANDO...";
+  }
+
+
+  mostrarMensagemPrecos(
+    "Salvando valores...",
+    true
+  );
+
+
+  try {
+
+    const form =
+      new FormData();
+
+
+    form.append(
+      "action",
+      "adminSalvarPrecos"
+    );
+
+
+    form.append(
+      "token",
+      token
+    );
+
+
+    form.append(
+      "mensal",
+      String(mensal)
+    );
+
+
+    form.append(
+      "trimestral",
+      String(trimestral)
+    );
+
+
+    form.append(
+      "anual",
+      String(anual)
+    );
+
+
+    const resposta =
+      await fetch(
+        AUTH_API,
+        {
+          method: "POST",
+          body: form
+        }
+      );
+
+
+    const dados =
+      await resposta.json();
+
+
+    if (!dados.ok) {
+
+      mostrarMensagemPrecos(
+        dados.mensagem ||
+        "Não foi possível salvar os valores.",
+        false
+      );
+
+      return;
+    }
+
+
+    mostrarMensagemPrecos(
+      dados.mensagem ||
+      "Valores atualizados com sucesso.",
+      true
+    );
+
+
+    await carregarPrecosPlanos();
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao salvar preços:",
+      erro
+    );
+
+
+    mostrarMensagemPrecos(
+      "Erro ao salvar os valores.",
+      false
+    );
+
+
+  } finally {
+
+    if (botao) {
+
+      botao.disabled = false;
+
+      botao.textContent =
+        "SALVAR VALORES";
+    }
+  }
+}
+
+
+// ======================================================
+// ADMIN - RESTAURAR PREÇOS
+// ======================================================
+
+async function restaurarPrecosAdmin() {
+
+  const token =
+    localStorage.getItem(
+      "token"
+    );
+
+
+  if (!token) {
+
+    mostrarMensagemPrecos(
+      "Sessão inválida.",
+      false
+    );
+
+    return;
+  }
+
+
+  const confirmou =
+    window.confirm(
+      "Deseja restaurar os valores padrão?\n\n" +
+      "Mensal: R$ 39,90\n" +
+      "Trimestral: R$ 89,90\n" +
+      "Anual: R$ 297,00"
+    );
+
+
+  if (!confirmou) {
+    return;
+  }
+
+
+  mostrarMensagemPrecos(
+    "Restaurando valores...",
+    true
+  );
+
+
+  try {
+
+    const form =
+      new FormData();
+
+
+    form.append(
+      "action",
+      "adminRestaurarPrecos"
+    );
+
+
+    form.append(
+      "token",
+      token
+    );
+
+
+    const resposta =
+      await fetch(
+        AUTH_API,
+        {
+          method: "POST",
+          body: form
+        }
+      );
+
+
+    const dados =
+      await resposta.json();
+
+
+    if (!dados.ok) {
+
+      mostrarMensagemPrecos(
+        dados.mensagem ||
+        "Não foi possível restaurar os valores.",
+        false
+      );
+
+      return;
+    }
+
+
+    mostrarMensagemPrecos(
+      dados.mensagem ||
+      "Valores padrão restaurados.",
+      true
+    );
+
+
+    await carregarPrecosPlanos();
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao restaurar preços:",
+      erro
+    );
+
+
+    mostrarMensagemPrecos(
+      "Erro ao restaurar valores.",
+      false
+    );
+  }
+}
+
+
+// ======================================================
+// MENSAGEM DE PAGAMENTO
+// ======================================================
+
+function mostrarMensagemPagamento(
+  texto,
+  sucesso = null
+) {
+
+  const msg =
+    document.getElementById(
+      "pagamentoMensagem"
+    );
+
+
+  if (!msg) {
+    return;
+  }
+
+
+  msg.style.display =
+    "block";
+
+
+  msg.className =
+    "diagnostic-result";
+
+
+  if (
+    sucesso === true
+  ) {
+
+    msg.classList.add(
+      "success-box"
+    );
+  }
+
+
+  if (
+    sucesso === false
+  ) {
+
+    msg.classList.add(
+      "error-box"
+    );
+  }
+
+
+  msg.textContent =
+    texto;
+}
+
+
+// ======================================================
+// ESCONDER MENSAGEM DE PAGAMENTO
+// ======================================================
+
+function esconderMensagemPagamento() {
+
+  const msg =
+    document.getElementById(
+      "pagamentoMensagem"
+    );
+
+
+  if (msg) {
+    msg.style.display = "none";
+  }
+}
+
+
+// ======================================================
+// NORMALIZAR PLANO
+// ======================================================
+
+function normalizarPlano(plano) {
+
+  return String(
+    plano || ""
+  )
+    .trim()
+    .toLowerCase()
+    .normalize(
+      "NFD"
+    )
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    );
+}
+
+
+// ======================================================
+// BOTÃO DO PLANO NO TOPO
+// ======================================================
+
+async function atualizarBotaoPlano() {
+
+  const botao =
+    document.getElementById(
+      "planoTopoBtn"
+    );
+
+
+  if (!botao) {
+    return;
+  }
+
+
+  botao.classList.remove(
+    "plano-mensal",
+    "plano-trimestral",
+    "plano-anual",
+    "sem-plano"
+  );
+
+
+  botao.textContent =
+    "VERIFICANDO PLANO...";
+
+
+  botao.classList.add(
+    "sem-plano"
+  );
+
+
+  const assinatura =
+    await consultarAssinatura();
+
+
+  botao.classList.remove(
+    "plano-mensal",
+    "plano-trimestral",
+    "plano-anual",
+    "sem-plano"
+  );
+
+
+  if (!assinatura.ativo) {
+
+    botao.textContent =
+      "SEM PLANO";
+
+
+    botao.classList.add(
+      "sem-plano"
+    );
+
+
+    return;
+  }
+
+
+  const plano =
+    normalizarPlano(
+      assinatura.plano
+    );
+
+
+  const dias =
+    Math.max(
+      0,
+      Number(
+        assinatura.diasRestantes ||
+        0
+      )
+    );
+
+
+  const textoDias =
+    dias === 1
+      ? "1 DIA"
+      : dias + " DIAS";
+
+
+  if (
+    plano.includes(
+      "trimestral"
+    )
+  ) {
+
+    botao.textContent =
+      "TRIMESTRAL • " +
+      textoDias;
+
+
+    botao.classList.add(
+      "plano-trimestral"
+    );
+
+  } else if (
+    plano.includes(
+      "anual"
+    )
+  ) {
+
+    botao.textContent =
+      "ANUAL • " +
+      textoDias;
+
+
+    botao.classList.add(
+      "plano-anual"
+    );
+
+  } else {
+
+    botao.textContent =
+      "MENSAL • " +
+      textoDias;
+
+
+    botao.classList.add(
+      "plano-mensal"
+    );
+  }
+}
+
+
+// ======================================================
+// CRIAR URL DE RETORNO DO PAGAMENTO
+// ======================================================
+
 function criarUrlRetornoPagamento() {
-  const url = new URL(window.location.href);
+
+  const url =
+    new URL(
+      window.location.href
+    );
+
+
   url.search = "";
+
   url.hash = "";
-  url.searchParams.set("pagamento", "retorno");
+
+
+  url.searchParams.set(
+    "pagamento",
+    "retorno"
+  );
+
+
   return url.toString();
 }
 
+
+// ======================================================
+// ESCOLHER PLANO
+// ======================================================
+
 async function escolherPlano(plano) {
+
   esconderMensagemPagamento();
 
-  const email = obterEmailUsuario();
+
+  const email =
+    obterEmailUsuario();
+
+
   if (!email) {
+
     mostrarMensagemPagamento(
       "Não foi possível identificar o e-mail da sua conta. Entre novamente no MAPTORK.",
       false
     );
+
     return;
   }
 
-  const botoes = document.querySelectorAll(".plano-btn");
-  botoes.forEach(btn => btn.disabled = true);
 
-  mostrarMensagemPagamento("Preparando seu checkout seguro da InfinitePay...", null);
+  const botoes =
+    document.querySelectorAll(
+      ".plano-btn"
+    );
+
+
+  botoes.forEach(
+    function(btn) {
+
+      btn.disabled = true;
+    }
+  );
+
+
+  mostrarMensagemPagamento(
+    "Preparando seu checkout seguro da InfinitePay...",
+    null
+  );
+
 
   try {
-    const api = obterApiAssinaturas();
-    const retorno = criarUrlRetornoPagamento();
+
+    const api =
+      obterApiAssinaturas();
+
+
+    const retorno =
+      criarUrlRetornoPagamento();
+
 
     const url =
       api +
       "?acao=criarCheckout" +
-      "&email=" + encodeURIComponent(email) +
-      "&plano=" + encodeURIComponent(plano) +
-      "&retorno=" + encodeURIComponent(retorno) +
-      "&_t=" + Date.now();
+      "&email=" +
+      encodeURIComponent(email) +
+      "&plano=" +
+      encodeURIComponent(plano) +
+      "&retorno=" +
+      encodeURIComponent(retorno) +
+      "&_t=" +
+      Date.now();
 
-    const resposta = await fetch(url, { cache: "no-store" });
-    const dados = await resposta.json();
 
-    if (!dados.sucesso || !dados.checkoutUrl) {
-      throw new Error(dados.mensagem || "Não foi possível criar o checkout.");
+    const resposta =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const dados =
+      await resposta.json();
+
+
+    if (
+      !dados.sucesso ||
+      !dados.checkoutUrl
+    ) {
+
+      throw new Error(
+        dados.mensagem ||
+        "Não foi possível criar o checkout."
+      );
     }
 
-    localStorage.setItem("maptork_pedido_pendente", dados.orderNsu || "");
-    localStorage.setItem("maptork_plano_pendente", plano);
 
-    window.location.href = dados.checkoutUrl;
+    localStorage.setItem(
+      "maptork_pedido_pendente",
+      dados.orderNsu || ""
+    );
+
+
+    localStorage.setItem(
+      "maptork_plano_pendente",
+      plano
+    );
+
+
+    window.location.href =
+      dados.checkoutUrl;
+
+
   } catch (erro) {
-    console.error("Erro ao criar checkout:", erro);
+
+    console.error(
+      "Erro ao criar checkout:",
+      erro
+    );
+
+
     mostrarMensagemPagamento(
-      "Não foi possível abrir o pagamento. " + (erro.message || "Tente novamente."),
+      "Não foi possível abrir o pagamento. " +
+      (
+        erro.message ||
+        "Tente novamente."
+      ),
       false
     );
-    botoes.forEach(btn => btn.disabled = false);
+
+
+    botoes.forEach(
+      function(btn) {
+
+        btn.disabled = false;
+      }
+    );
   }
 }
 
+
+// ======================================================
+// PROCESSAR RETORNO DA INFINITEPAY
+// ======================================================
+
 async function processarRetornoInfinitePay() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("pagamento") !== "retorno") return;
 
-  const orderNsu = params.get("order_nsu") || "";
-  const transactionNsu = params.get("transaction_nsu") || "";
-  const slug = params.get("slug") || "";
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
 
-  const navAssinaturas = document.querySelectorAll('.nav button')[2];
-  showPage('assinaturas', navAssinaturas);
 
-  if (!orderNsu || !transactionNsu || !slug) {
+  if (
+    params.get(
+      "pagamento"
+    ) !==
+    "retorno"
+  ) {
+    return;
+  }
+
+
+  const orderNsu =
+    params.get(
+      "order_nsu"
+    ) || "";
+
+
+  const transactionNsu =
+    params.get(
+      "transaction_nsu"
+    ) || "";
+
+
+  const slug =
+    params.get(
+      "slug"
+    ) || "";
+
+
+  const navAssinaturas =
+    document
+      .querySelectorAll(
+        ".nav button"
+      )[2];
+
+
+  showPage(
+    "assinaturas",
+    navAssinaturas
+  );
+
+
+  if (
+    !orderNsu ||
+    !transactionNsu ||
+    !slug
+  ) {
+
     mostrarMensagemPagamento(
       "Você voltou do pagamento, mas faltaram dados para confirmar a transação. Aguarde alguns segundos e atualize a página.",
       false
     );
+
+
     await atualizarBotaoPlano();
+
+
     limparParametrosPagamento();
+
+
     return;
   }
 
-  mostrarMensagemPagamento("Confirmando pagamento com a InfinitePay...", null);
+
+  mostrarMensagemPagamento(
+    "Confirmando pagamento com a InfinitePay...",
+    null
+  );
+
 
   try {
-    const api = obterApiAssinaturas();
+
+    const api =
+      obterApiAssinaturas();
+
+
     const url =
       api +
       "?acao=confirmarPagamento" +
-      "&order_nsu=" + encodeURIComponent(orderNsu) +
-      "&transaction_nsu=" + encodeURIComponent(transactionNsu) +
-      "&slug=" + encodeURIComponent(slug) +
-      "&_t=" + Date.now();
+      "&order_nsu=" +
+      encodeURIComponent(
+        orderNsu
+      ) +
+      "&transaction_nsu=" +
+      encodeURIComponent(
+        transactionNsu
+      ) +
+      "&slug=" +
+      encodeURIComponent(
+        slug
+      ) +
+      "&_t=" +
+      Date.now();
 
-    const resposta = await fetch(url, { cache: "no-store" });
-    const dados = await resposta.json();
 
-    // O webhook pode ter processado antes do retorno. Por isso também
-    // consultamos a assinatura real da planilha.
-    const assinatura = await consultarAssinatura();
+    const resposta =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
 
-    if ((dados.pago === true || dados.sucesso === true) && assinatura.ativo) {
+
+    const dados =
+      await resposta.json();
+
+
+    const assinatura =
+      await consultarAssinatura();
+
+
+    if (
+      (
+        dados.pago === true ||
+        dados.sucesso === true
+      )
+      &&
+      assinatura.ativo
+    ) {
+
       mostrarMensagemPagamento(
         "Pagamento confirmado! Seu plano está ativo por " +
         assinatura.diasRestantes +
@@ -1095,45 +3232,101 @@ async function processarRetornoInfinitePay() {
         true
       );
 
-      await atualizarBotaoPlano();
-      localStorage.removeItem("maptork_pedido_pendente");
-      localStorage.removeItem("maptork_plano_pendente");
 
-      const manual = localStorage.getItem("maptork_manual_pendente");
-      localStorage.removeItem("maptork_manual_pendente");
+      await atualizarBotaoPlano();
+
+
+      localStorage.removeItem(
+        "maptork_pedido_pendente"
+      );
+
+
+      localStorage.removeItem(
+        "maptork_plano_pendente"
+      );
+
+
+      const manual =
+        localStorage.getItem(
+          "maptork_manual_pendente"
+        );
+
+
+      localStorage.removeItem(
+        "maptork_manual_pendente"
+      );
+
 
       limparParametrosPagamento();
 
+
       if (manual) {
-        setTimeout(() => {
-          window.location.href = manual;
-        }, 1200);
+
+        setTimeout(
+          function() {
+
+            window.location.href =
+              manual;
+
+          },
+          1200
+        );
       }
+
 
       return;
     }
 
+
     mostrarMensagemPagamento(
-      dados.mensagem || "Pagamento ainda não confirmado. Aguarde alguns segundos e atualize a página.",
+      dados.mensagem ||
+      "Pagamento ainda não confirmado. Aguarde alguns segundos e atualize a página.",
       false
     );
 
+
     await atualizarBotaoPlano();
+
+
     limparParametrosPagamento();
+
+
   } catch (erro) {
-    console.error("Erro ao confirmar pagamento:", erro);
+
+    console.error(
+      "Erro ao confirmar pagamento:",
+      erro
+    );
+
+
     mostrarMensagemPagamento(
       "Não foi possível confirmar o pagamento agora. Se ele já foi aprovado, o webhook atualizará sua assinatura automaticamente.",
       false
     );
+
+
     await atualizarBotaoPlano();
+
+
     limparParametrosPagamento();
   }
 }
 
+
+// ======================================================
+// LIMPAR PARÂMETROS DO PAGAMENTO
+// ======================================================
+
 function limparParametrosPagamento() {
+
   try {
-    const url = new URL(window.location.href);
+
+    const url =
+      new URL(
+        window.location.href
+      );
+
+
     [
       "pagamento",
       "receipt_url",
@@ -1141,24 +3334,98 @@ function limparParametrosPagamento() {
       "slug",
       "capture_method",
       "transaction_nsu"
-    ].forEach(chave => url.searchParams.delete(chave));
+    ]
+      .forEach(
+        function(chave) {
 
-    window.history.replaceState({}, "", url.pathname + (url.search || "") + (url.hash || ""));
+          url.searchParams.delete(
+            chave
+          );
+        }
+      );
+
+
+    window.history.replaceState(
+      {},
+      "",
+      url.pathname +
+      (
+        url.search ||
+        ""
+      ) +
+      (
+        url.hash ||
+        ""
+      )
+    );
+
+
   } catch (erro) {
-    console.warn("Não foi possível limpar a URL do pagamento.", erro);
+
+    console.warn(
+      "Não foi possível limpar a URL do pagamento.",
+      erro
+    );
   }
 }
 
+
+// ======================================================
+// INICIAR SISTEMA
+// ======================================================
+
 async function iniciarSistemaAssinaturas() {
-  // Aguarda a validação da sessão preencher o e-mail do usuário.
-  for (let tentativa = 0; tentativa < 12; tentativa++) {
-    if (obterEmailUsuario()) break;
-    await new Promise(resolve => setTimeout(resolve, 250));
+
+  // Aguarda o index.html terminar
+  // de carregar o usuário.
+
+  for (
+    let tentativa = 0;
+    tentativa < 12;
+    tentativa++
+  ) {
+
+    if (
+      obterEmailUsuario()
+    ) {
+      break;
+    }
+
+
+    await new Promise(
+      function(resolve) {
+
+        setTimeout(
+          resolve,
+          250
+        );
+      }
+    );
   }
 
+
+  // Carregar valores definidos
+  // pelo administrador.
+
+  await carregarPrecosPlanos();
+
+
+  // Atualizar plano no topo.
+
   await atualizarBotaoPlano();
+
+
+  // Processar retorno do pagamento.
+
   await processarRetornoInfinitePay();
 }
 
-document.addEventListener("DOMContentLoaded", iniciarSistemaAssinaturas);
 
+// ======================================================
+// INICIALIZAÇÃO
+// ======================================================
+
+document.addEventListener(
+  "DOMContentLoaded",
+  iniciarSistemaAssinaturas
+);

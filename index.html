@@ -6,19 +6,18 @@
 <meta charset="UTF-8">
 
 <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover"
 >
 
-<title>CLUB VRUM</title>
+<title>MAPTORK</title>
 
 <link rel="stylesheet" href="style.css">
-
 
 <style>
 
 html.auth-pendente body {
-    visibility: hidden;
+  visibility: hidden;
 }
 
 </style>
@@ -26,283 +25,332 @@ html.auth-pendente body {
 
 <script>
 
+// ======================================================
+// API PRINCIPAL
+// ======================================================
+
 const AUTH_API =
 "https://script.google.com/macros/s/AKfycbzScIhxB1v7f5DVtT0-p38tX2ppKj1H1kckl04aZOU3qHkcma_w10oZ-wZ5I32QTcnK/exec";
 
 
-document.documentElement.classList.add("auth-pendente");
+document.documentElement.classList.add(
+  "auth-pendente"
+);
 
+
+// ======================================================
+// VERIFICAR SESSÃO
+// ======================================================
 
 async function verificarSessao() {
 
-    const token =
-        localStorage.getItem("token");
+  const token =
+    localStorage.getItem(
+      "token"
+    );
 
 
-    if (!token) {
+  if (!token) {
 
-        window.location.replace("login.html");
+    window.location.replace(
+      "login.html"
+    );
 
-        return;
+    return;
+  }
+
+
+  try {
+
+    const resposta =
+      await fetch(
+
+        AUTH_API +
+
+        "?action=verificarToken" +
+
+        "&token=" +
+        encodeURIComponent(
+          token
+        ) +
+
+        "&_t=" +
+        Date.now(),
+
+        {
+          cache: "no-store"
+        }
+
+      );
+
+
+    const dados =
+      await resposta.json();
+
+
+    if (!dados.ok) {
+
+      localStorage.removeItem(
+        "token"
+      );
+
+      localStorage.removeItem(
+        "nome"
+      );
+
+      localStorage.removeItem(
+        "email"
+      );
+
+
+      window.location.replace(
+        "login.html"
+      );
+
+      return;
     }
 
 
-    try {
-
-        const resposta = await fetch(
-
-            AUTH_API +
-            "?action=verificarToken&token=" +
-            encodeURIComponent(token),
-
-            {
-                cache: "no-store"
-            }
-
-        );
-
-
-        const dados =
-            await resposta.json();
-
-
-        if (!dados.ok) {
-
-            localStorage.removeItem("token");
-            localStorage.removeItem("nome");
-            localStorage.removeItem("email");
-
-            window.location.replace("login.html");
-
-            return;
-        }
-
-
-        if (dados.nome) {
-
-            localStorage.setItem(
-                "nome",
-                dados.nome
-            );
-
-        }
-
-
-        if (dados.email) {
-
-            localStorage.setItem(
-                "email",
-                dados.email
-            );
-
-        }
-
-
-        window.usuarioAtual = {
-
-            nome:
-                dados.nome ||
-                localStorage.getItem("nome") ||
-                "",
-
-            email:
-                dados.email ||
-                localStorage.getItem("email") ||
-                "",
-
-            admin:
-                dados.admin === true
-
-        };
-
-
-        const atualizarUsuario =
-            function () {
-
-
-                const nome =
-                    window.usuarioAtual.nome ||
-                    "Usuário";
-
-
-                const usuarioNome =
-                    document.getElementById(
-                        "usuarioNome"
-                    );
-
-
-                const contaNome =
-                    document.getElementById(
-                        "contaNome"
-                    );
-
-
-                const contaEmail =
-                    document.getElementById(
-                        "contaEmail"
-                    );
-
-
-                const adminMenuBtn =
-                    document.getElementById(
-                        "adminMenuBtn"
-                    );
-
-
-                if (usuarioNome) {
-
-                    usuarioNome.textContent =
-                        "Bem-vindo, " + nome;
-
-                }
-
-
-                if (contaNome) {
-
-                    contaNome.textContent =
-                        nome;
-
-                }
-
-
-                if (contaEmail) {
-
-                    contaEmail.textContent =
-                        window.usuarioAtual.email ||
-                        "";
-
-                }
-
-
-                if (adminMenuBtn) {
-
-                    adminMenuBtn.style.display =
-                        window.usuarioAtual.admin
-                            ? "block"
-                            : "none";
-
-                }
-
-            };
-
-
-        if (
-            document.readyState ===
-            "loading"
-        ) {
-
-            document.addEventListener(
-
-                "DOMContentLoaded",
-
-                atualizarUsuario,
-
-                {
-                    once: true
-                }
-
-            );
-
-        }
-
-        else {
-
-            atualizarUsuario();
-
-        }
-
-
-        document.documentElement
-            .classList
-            .remove("auth-pendente");
+    if (dados.nome) {
+
+      localStorage.setItem(
+        "nome",
+        dados.nome
+      );
 
     }
 
-    catch (erro) {
 
-        console.error(
-            "Erro ao verificar sessão:",
-            erro
-        );
+    if (dados.email) {
 
-
-        localStorage.removeItem("token");
-        localStorage.removeItem("nome");
-        localStorage.removeItem("email");
-
-
-        window.location.replace(
-            "login.html"
-        );
+      localStorage.setItem(
+        "email",
+        dados.email
+      );
 
     }
+
+
+    window.usuarioAtual = {
+
+      nome:
+        dados.nome ||
+        localStorage.getItem(
+          "nome"
+        ) ||
+        "",
+
+      email:
+        dados.email ||
+        localStorage.getItem(
+          "email"
+        ) ||
+        "",
+
+      admin:
+        dados.admin === true
+
+    };
+
+
+    function atualizarUsuarioTela() {
+
+      const nome =
+        window.usuarioAtual.nome ||
+        "Usuário";
+
+
+      const usuarioNome =
+        document.getElementById(
+          "usuarioNome"
+        );
+
+
+      const contaNome =
+        document.getElementById(
+          "contaNome"
+        );
+
+
+      const contaEmail =
+        document.getElementById(
+          "contaEmail"
+        );
+
+
+      const adminMenuBtn =
+        document.getElementById(
+          "adminMenuBtn"
+        );
+
+
+      if (usuarioNome) {
+
+        usuarioNome.textContent =
+          "Bem-vindo, " +
+          nome;
+
+      }
+
+
+      if (contaNome) {
+
+        contaNome.textContent =
+          nome;
+
+      }
+
+
+      if (contaEmail) {
+
+        contaEmail.textContent =
+          window.usuarioAtual.email ||
+          "";
+
+      }
+
+
+      if (adminMenuBtn) {
+
+        adminMenuBtn.style.display =
+
+          window.usuarioAtual.admin
+
+            ? "block"
+
+            : "none";
+
+      }
+
+    }
+
+
+    if (
+      document.readyState ===
+      "loading"
+    ) {
+
+      document.addEventListener(
+
+        "DOMContentLoaded",
+
+        atualizarUsuarioTela,
+
+        {
+          once: true
+        }
+
+      );
+
+    }
+
+    else {
+
+      atualizarUsuarioTela();
+
+    }
+
+
+    document
+      .documentElement
+      .classList
+      .remove(
+        "auth-pendente"
+      );
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao verificar sessão:",
+      erro
+    );
+
+
+    localStorage.removeItem(
+      "token"
+    );
+
+    localStorage.removeItem(
+      "nome"
+    );
+
+    localStorage.removeItem(
+      "email"
+    );
+
+
+    window.location.replace(
+      "login.html"
+    );
+
+  }
 
 }
 
 
+// ======================================================
+// SAIR
+// ======================================================
 
 async function sair() {
 
-    const token =
-        localStorage.getItem("token");
+  const token =
+    localStorage.getItem(
+      "token"
+    );
 
 
-    try {
+  try {
 
-        if (token) {
+    if (token) {
 
-            const form =
-                new FormData();
-
-
-            form.append(
-                "action",
-                "logout"
-            );
+      const form =
+        new FormData();
 
 
-            form.append(
-                "token",
-                token
-            );
+      form.append(
+        "action",
+        "logout"
+      );
 
 
-            await fetch(
+      form.append(
+        "token",
+        token
+      );
 
-                AUTH_API,
 
-                {
-                    method: "POST",
-                    body: form
-                }
+      await fetch(
 
-            );
+        AUTH_API,
 
+        {
+          method: "POST",
+          body: form
         }
 
-    }
-
-    catch (erro) {
-
-        console.error(
-            "Erro ao encerrar sessão no servidor:",
-            erro
-        );
+      );
 
     }
 
-    finally {
+  } catch (erro) {
 
-        localStorage.removeItem("token");
-        localStorage.removeItem("nome");
-        localStorage.removeItem("email");
+    console.error(
+      "Erro no logout:",
+      erro
+    );
+
+  } finally {
+
+    localStorage.clear();
 
 
-        window.location.replace(
-            "login.html"
-        );
+    window.location.replace(
+      "login.html"
+    );
 
-    }
+  }
 
 }
 
@@ -311,9 +359,7 @@ verificarSessao();
 
 </script>
 
-
 </head>
-
 
 
 <body>
@@ -322,16 +368,16 @@ verificarSessao();
 <div class="app">
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- MENU -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <aside class="sidebar">
 
 
 <div class="brand">
 
-    MAP<span>TORK</span>
+  MAP<span>TORK</span>
 
 </div>
 
@@ -340,54 +386,54 @@ verificarSessao();
 
 
 <button
-    class="active"
-    onclick="showPage('inicio',this)"
+  class="active"
+  onclick="showPage('inicio',this)"
 >
-    ⌂ &nbsp; Início
+  ⌂ &nbsp; Início
 </button>
 
 
 <button
-    onclick="showPage('manuais',this)"
+  onclick="showPage('manuais',this)"
 >
-    ▤ &nbsp; Manuais
+  ▤ &nbsp; Manuais
 </button>
 
 
 <button
-    onclick="showPage('assinaturas',this)"
+  onclick="showPage('assinaturas',this)"
 >
-    ★ &nbsp; Minhas Assinaturas
+  ★ &nbsp; Minhas Assinaturas
 </button>
 
 
 <button
-    onclick="showPage('esquemas',this)"
+  onclick="showPage('esquemas',this)"
 >
-    ⌁ &nbsp; Esquemas
+  ⌁ &nbsp; Esquemas
 </button>
 
 
 <button
-    onclick="showPage('suporte',this)"
+  onclick="showPage('suporte',this)"
 >
-    ◌ &nbsp; Suporte
+  ◌ &nbsp; Suporte
 </button>
 
 
 <button
-    onclick="showPage('conta',this)"
+  onclick="showPage('conta',this)"
 >
-    ♙ &nbsp; Conta
+  ♙ &nbsp; Conta
 </button>
 
 
 <button
-    id="adminMenuBtn"
-    style="display:none"
-    onclick="abrirAdmin(this)"
+  id="adminMenuBtn"
+  style="display:none"
+  onclick="abrirAdmin(this)"
 >
-    ⚙ &nbsp; Admin
+  ⚙ &nbsp; Admin
 </button>
 
 
@@ -398,47 +444,59 @@ verificarSessao();
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- CONTEÚDO -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <main class="main">
 
+
+<!-- ================================================== -->
+<!-- TOPO -->
+<!-- ================================================== -->
 
 <div class="top">
 
 
 <div class="user">
 
-    ●
+  ●
 
-    <span id="usuarioNome">
-        Usuário
-    </span>
+  <span id="usuarioNome">
+    Usuário
+  </span>
 
 </div>
 
 
 <button
-    id="planoTopoBtn"
-    class="plano-topo-btn sem-plano"
-    type="button"
-    onclick="showPage('assinaturas', document.querySelectorAll('.nav button')[2])"
+  id="planoTopoBtn"
+  class="plano-topo-btn sem-plano"
+  type="button"
+  onclick="
+    showPage(
+      'assinaturas',
+      document.querySelectorAll('.nav button')[2]
+    )
+  "
 >
-    SEM PLANO
+
+  SEM PLANO
+
 </button>
+
 
 </div>
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- INÍCIO -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <section
-    id="inicio"
-    class="page"
+  id="inicio"
+  class="page"
 >
 
 
@@ -446,9 +504,9 @@ verificarSessao();
 
 
 <img
-    src="img/logo.png"
-    class="logo"
-    alt=""
+  src="img/logo.png"
+  class="logo"
+  alt="MAPTORK"
 >
 
 
@@ -457,7 +515,7 @@ verificarSessao();
 
 <h1>
 
-    MAP<span>TORK</span>
+  MAP<span>TORK</span>
 
 </h1>
 
@@ -472,11 +530,11 @@ conteúdo técnico em um só lugar.
 
 
 <button
-    class="cta"
-    onclick="openPage('manuais',1)"
+  class="cta"
+  onclick="openPage('manuais',1)"
 >
 
-    ACESSAR MANUAIS
+  ACESSAR MANUAIS
 
 </button>
 
@@ -486,7 +544,7 @@ conteúdo técnico em um só lugar.
 
 <div class="hero-art">
 
-    VRUM
+  VRUM
 
 </div>
 
@@ -500,34 +558,34 @@ conteúdo técnico em um só lugar.
 
 <h2>
 
-    Marcas
+  Marcas
 
 </h2>
 
 
 <div
-    class="grid"
-    id="brands"
+  class="grid"
+  id="brands"
 >
 
 
 <div
-    class="card"
-    data-key="honda"
+  class="card"
+  data-key="honda"
 >
 
 <img
-    src="img/honda.png"
-    class="marcas"
-    alt=""
+  src="img/honda.png"
+  class="marcas"
+  alt="Honda"
 >
 
 <div class="brand-name">
-    HONDA
+  HONDA
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -535,22 +593,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="yamaha"
+  class="card"
+  data-key="yamaha"
 >
 
 <img
-    src="img/yamaha.png"
-    class="marcas"
-    alt=""
+  src="img/yamaha.png"
+  class="marcas"
+  alt="Yamaha"
 >
 
 <div class="brand-name">
-    YAMAHA
+  YAMAHA
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -558,22 +616,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="suzuki"
+  class="card"
+  data-key="suzuki"
 >
 
 <img
-    src="img/suzuki.png"
-    class="marcas"
-    alt=""
+  src="img/suzuki.png"
+  class="marcas"
+  alt="Suzuki"
 >
 
 <div class="brand-name">
-    SUZUKI
+  SUZUKI
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -581,22 +639,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="bmw"
+  class="card"
+  data-key="bmw"
 >
 
 <img
-    src="img/bmw.png"
-    class="marcas"
-    alt=""
+  src="img/bmw.png"
+  class="marcas"
+  alt="BMW"
 >
 
 <div class="brand-name">
-    BMW
+  BMW
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -604,22 +662,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="ktm"
+  class="card"
+  data-key="ktm"
 >
 
 <img
-    src="img/ktm.png"
-    class="marcas"
-    alt=""
+  src="img/ktm.png"
+  class="marcas"
+  alt="KTM"
 >
 
 <div class="brand-name">
-    KTM
+  KTM
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -627,22 +685,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="ducati"
+  class="card"
+  data-key="ducati"
 >
 
 <img
-    src="img/ducati.png"
-    class="marcas"
-    alt=""
+  src="img/ducati.png"
+  class="marcas"
+  alt="Ducati"
 >
 
 <div class="brand-name">
-    DUCATI
+  DUCATI
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -650,22 +708,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="triumph"
+  class="card"
+  data-key="triumph"
 >
 
 <img
-    src="img/triumph.png"
-    class="marcas"
-    alt=""
+  src="img/triumph.png"
+  class="marcas"
+  alt="Triumph"
 >
 
 <div class="brand-name">
-    TRIUMPH
+  TRIUMPH
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -673,22 +731,22 @@ conteúdo técnico em um só lugar.
 
 
 <div
-    class="card"
-    data-key="harley"
+  class="card"
+  data-key="harley"
 >
 
 <img
-    src="img/harley.png"
-    class="marcas"
-    alt=""
+  src="img/harley.png"
+  class="marcas"
+  alt="Harley-Davidson"
 >
 
 <div class="brand-name">
-    HARLEY
+  HARLEY
 </div>
 
 <small class="muted">
-    Manuais e diagnóstico
+  Manuais e diagnóstico
 </small>
 
 </div>
@@ -703,14 +761,14 @@ conteúdo técnico em um só lugar.
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- MANUAIS -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <section
-    id="manuais"
-    class="page"
-    style="display:none"
+  id="manuais"
+  class="page"
+  style="display:none"
 >
 
 
@@ -721,9 +779,9 @@ conteúdo técnico em um só lugar.
 
 
 <img
-    src="img/caixa-01.png"
-    class="logo"
-    alt=""
+  src="img/caixa-01.png"
+  class="logo"
+  alt=""
 >
 
 
@@ -734,8 +792,7 @@ conteúdo técnico em um só lugar.
 
 Atenção: É necessário possuir uma conta no
 Google Drive para armazenar e gerenciar os
-manuais. Após criar sua conta, você poderá
-fazer o upload dos arquivos.
+manuais.
 
 </h4>
 
@@ -751,12 +808,13 @@ Buscar manual no Google Drive
 
 
 <input
-    id="driveSearch"
-    placeholder="Ex.: Honda-cb-300"
-    onkeydown="
-        if(event.key==='Enter')
-        searchDrive()
-    "
+  id="driveSearch"
+  placeholder="Ex.: Honda-cb-300"
+  onkeydown="
+    if(event.key==='Enter'){
+      searchDrive()
+    }
+  "
 >
 
 
@@ -764,25 +822,25 @@ Buscar manual no Google Drive
 
 
 <button
-    class="cta"
-    onclick="searchDrive()"
+  class="cta"
+  onclick="searchDrive()"
 >
 
-    BUSCAR PDFs
+  BUSCAR PDFs
 
 </button>
 
 
 <div
-    id="driveStatus"
-    class="diagnostic-result"
+  id="driveStatus"
+  class="diagnostic-result"
 >
 </div>
 
 
 <div
-    id="driveResults"
-    class="drive-results"
+  id="driveResults"
+  class="drive-results"
 >
 </div>
 
@@ -794,30 +852,23 @@ Buscar manual no Google Drive
 
 
 
-<!-- ====================================== -->
-<!-- MINHAS ASSINATURAS -->
-<!-- ====================================== -->
+<!-- ================================================== -->
+<!-- ASSINATURAS -->
+<!-- ================================================== -->
 
 <section
-    id="assinaturas"
-    class="page"
-    style="display:none"
+  id="assinaturas"
+  class="page"
+  style="display:none"
 >
 
 
 <div class="assinatura-header">
 
 
-<span class="assinatura-badge">
-
-    PRO
-
-</span>
-
-
 <h1>
 
-    Escolha seu plano
+  Escolha seu plano
 
 </h1>
 
@@ -835,34 +886,33 @@ diagramas, catálogos e materiais técnicos.
 
 
 <div
-    id="pagamentoMensagem"
-    class="diagnostic-result"
-    style="display:none; margin: 0 0 18px;"
-></div>
+  id="pagamentoMensagem"
+  class="diagnostic-result"
+  style="display:none;margin-bottom:18px"
+>
+</div>
 
-<!-- PLANOS -->
+
 
 <div class="planos-grid">
 
 
 
-<!-- ====================================== -->
 <!-- MENSAL -->
-<!-- ====================================== -->
 
 <div class="card plano-card">
 
 
 <div class="plano-periodo">
 
-    1 mês de acesso
+  1 mês de acesso
 
 </div>
 
 
 <h2>
 
-    Plano Mensal
+  Plano Mensal
 
 </h2>
 
@@ -877,16 +927,16 @@ Acesso completo com cobrança mensal.
 <div class="plano-preco">
 
 
-<strong>
+<strong id="precoMensal">
 
-    R$ 39,90
+  R$ 39,90
 
 </strong>
 
 
 <span>
 
-    por mês
+  por mês
 
 </span>
 
@@ -894,44 +944,42 @@ Acesso completo com cobrança mensal.
 </div>
 
 
-
 <ul class="plano-beneficios">
 
 <li>
-    Biblioteca completa de manuais
+  Biblioteca completa de manuais
 </li>
 
 <li>
-    Atualizações frequentes
+  Atualizações frequentes
 </li>
 
 <li>
-    Downloads ilimitados
+  Downloads ilimitados
 </li>
 
 <li>
-    Pesquisa inteligente
+  Pesquisa inteligente
 </li>
 
 <li>
-    Favoritos e histórico
+  Favoritos e histórico
 </li>
 
 <li>
-    Suporte prioritário
+  Suporte prioritário
 </li>
 
 </ul>
 
 
-
 <button
-    class="cta plano-btn"
-    type="button"
-    onclick="escolherPlano('mensal')"
+  class="cta plano-btn"
+  type="button"
+  onclick="escolherPlano('mensal')"
 >
 
-    ESCOLHER PLANO
+  ESCOLHER PLANO
 
 </button>
 
@@ -940,30 +988,28 @@ Acesso completo com cobrança mensal.
 
 
 
-<!-- ====================================== -->
 <!-- TRIMESTRAL -->
-<!-- ====================================== -->
 
 <div class="card plano-card">
 
 
 <div class="plano-selo">
 
-    Mais escolhido
+  Mais escolhido
 
 </div>
 
 
 <div class="plano-periodo">
 
-    3 meses de acesso
+  3 meses de acesso
 
 </div>
 
 
 <h2>
 
-    Plano Trimestral
+  Plano Trimestral
 
 </h2>
 
@@ -978,16 +1024,16 @@ Economize escolhendo três meses de acesso.
 <div class="plano-preco">
 
 
-<strong>
+<strong id="precoTrimestral">
 
-    R$ 89,90
+  R$ 89,90
 
 </strong>
 
 
 <span>
 
-    a cada 3 meses
+  a cada 3 meses
 
 </span>
 
@@ -995,44 +1041,42 @@ Economize escolhendo três meses de acesso.
 </div>
 
 
-
 <ul class="plano-beneficios">
 
 <li>
-    Biblioteca completa de manuais
+  Biblioteca completa de manuais
 </li>
 
 <li>
-    Atualizações frequentes
+  Atualizações frequentes
 </li>
 
 <li>
-    Downloads ilimitados
+  Downloads ilimitados
 </li>
 
 <li>
-    Pesquisa inteligente
+  Pesquisa inteligente
 </li>
 
 <li>
-    Favoritos e histórico
+  Favoritos e histórico
 </li>
 
 <li>
-    Suporte prioritário
+  Suporte prioritário
 </li>
 
 </ul>
 
 
-
 <button
-    class="cta plano-btn"
-    type="button"
-    onclick="escolherPlano('trimestral')"
+  class="cta plano-btn"
+  type="button"
+  onclick="escolherPlano('trimestral')"
 >
 
-    ESCOLHER PLANO
+  ESCOLHER PLANO
 
 </button>
 
@@ -1041,30 +1085,28 @@ Economize escolhendo três meses de acesso.
 
 
 
-<!-- ====================================== -->
 <!-- ANUAL -->
-<!-- ====================================== -->
 
 <div class="card plano-card">
 
 
 <div class="plano-selo economia">
 
-    Maior economia
+  Maior economia
 
 </div>
 
 
 <div class="plano-periodo">
 
-    1 ano de acesso
+  1 ano de acesso
 
 </div>
 
 
 <h2>
 
-    Plano Anual
+  Plano Anual
 
 </h2>
 
@@ -1079,16 +1121,16 @@ O melhor custo-benefício para acesso contínuo.
 <div class="plano-preco">
 
 
-<strong>
+<strong id="precoAnual">
 
-    R$ 297,00
+  R$ 297,00
 
 </strong>
 
 
 <span>
 
-    por ano
+  por ano
 
 </span>
 
@@ -1096,44 +1138,42 @@ O melhor custo-benefício para acesso contínuo.
 </div>
 
 
-
 <ul class="plano-beneficios">
 
 <li>
-    Biblioteca completa de manuais
+  Biblioteca completa de manuais
 </li>
 
 <li>
-    Atualizações frequentes
+  Atualizações frequentes
 </li>
 
 <li>
-    Downloads ilimitados
+  Downloads ilimitados
 </li>
 
 <li>
-    Pesquisa inteligente
+  Pesquisa inteligente
 </li>
 
 <li>
-    Favoritos e histórico
+  Favoritos e histórico
 </li>
 
 <li>
-    Suporte prioritário
+  Suporte prioritário
 </li>
 
 </ul>
 
 
-
 <button
-    class="cta plano-btn"
-    type="button"
-    onclick="escolherPlano('anual')"
+  class="cta plano-btn"
+  type="button"
+  onclick="escolherPlano('anual')"
 >
 
-    ESCOLHER PLANO
+  ESCOLHER PLANO
 
 </button>
 
@@ -1145,16 +1185,12 @@ O melhor custo-benefício para acesso contínuo.
 
 
 
-<!-- ====================================== -->
-<!-- PAGAMENTO -->
-<!-- ====================================== -->
-
 <div class="card pagamento-seguro">
 
 
 <h3>
 
-    🔒 Pagamento seguro pela InfinitePay
+  🔒 Pagamento seguro pela InfinitePay
 
 </h3>
 
@@ -1162,8 +1198,8 @@ O melhor custo-benefício para acesso contínuo.
 <p>
 
 Após a confirmação do pagamento, sua assinatura
-será atualizada automaticamente pelo webhook e
-o acesso aos downloads será liberado.
+será atualizada automaticamente e o acesso aos
+manuais será liberado.
 
 </p>
 
@@ -1175,20 +1211,20 @@ o acesso aos downloads será liberado.
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- ESQUEMAS -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <section
-    id="esquemas"
-    class="page"
-    style="display:none"
+  id="esquemas"
+  class="page"
+  style="display:none"
 >
 
 
 <h1>
 
-    Esquemas Elétricos
+  Esquemas Elétricos
 
 </h1>
 
@@ -1206,11 +1242,11 @@ Acesso organizado aos esquemas por marca e modelo.
 <div class="card">
 
 <b>
-    ⚡ Injeção eletrônica
+  ⚡ Injeção eletrônica
 </b>
 
 <p>
-    Diagramas e conexões.
+  Diagramas e conexões.
 </p>
 
 </div>
@@ -1219,11 +1255,11 @@ Acesso organizado aos esquemas por marca e modelo.
 <div class="card">
 
 <b>
-    ⚡ Sistema de carga
+  ⚡ Sistema de carga
 </b>
 
 <p>
-    Alternador e regulador.
+  Alternador e regulador.
 </p>
 
 </div>
@@ -1232,11 +1268,11 @@ Acesso organizado aos esquemas por marca e modelo.
 <div class="card">
 
 <b>
-    ⚡ Partida
+  ⚡ Partida
 </b>
 
 <p>
-    Relés e motor de partida.
+  Relés e motor de partida.
 </p>
 
 </div>
@@ -1249,20 +1285,20 @@ Acesso organizado aos esquemas por marca e modelo.
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- SUPORTE -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <section
-    id="suporte"
-    class="page"
-    style="display:none"
+  id="suporte"
+  class="page"
+  style="display:none"
 >
 
 
 <h1>
 
-    Suporte Técnico
+  Suporte Técnico
 
 </h1>
 
@@ -1279,7 +1315,7 @@ Central de atendimento e orientação para membros.
 
 <h3>
 
-    Precisa de ajuda?
+  Precisa de ajuda?
 
 </h3>
 
@@ -1292,16 +1328,16 @@ Entre em contato pelo WhatsApp para atendimento.
 
 
 <button
-    class="cta"
-    onclick="
-        window.open(
-            'https://wa.me/5561995906710',
-            '_blank'
-        )
-    "
+  class="cta"
+  onclick="
+    window.open(
+      'https://wa.me/5561995906710',
+      '_blank'
+    )
+  "
 >
 
-    ABRIR WHATSAPP
+  ABRIR WHATSAPP
 
 </button>
 
@@ -1313,31 +1349,33 @@ Entre em contato pelo WhatsApp para atendimento.
 
 
 
-<!-- ====================================== -->
-<!-- CONTA -->
-<!-- ====================================== -->
+<!-- ================================================== -->
+<!-- MINHA CONTA -->
+<!-- ================================================== -->
 
 <section
-    id="conta"
-    class="page"
-    style="display:none"
+  id="conta"
+  class="page"
+  style="display:none"
 >
 
 
 <h1>
 
-    Minha Conta
+  Minha Conta
 
 </h1>
 
 
+
+<!-- DADOS -->
 
 <div class="card form-card">
 
 
 <h3>
 
-    Dados da conta
+  Dados da conta
 
 </h3>
 
@@ -1345,11 +1383,11 @@ Entre em contato pelo WhatsApp para atendimento.
 <p>
 
 <strong>
-    Nome:
+  Nome:
 </strong>
 
 <span id="contaNome">
-    Carregando...
+  Carregando...
 </span>
 
 </p>
@@ -1358,11 +1396,11 @@ Entre em contato pelo WhatsApp para atendimento.
 <p>
 
 <strong>
-    E-mail:
+  E-mail:
 </strong>
 
 <span id="contaEmail">
-    Carregando...
+  Carregando...
 </span>
 
 </p>
@@ -1372,15 +1410,16 @@ Entre em contato pelo WhatsApp para atendimento.
 
 
 
+<!-- ALTERAR SENHA -->
+
 <div class="card form-card">
 
 
 <h3>
 
-    Alterar senha
+  Alterar senha
 
 </h3>
-
 
 
 <div class="field">
@@ -1388,15 +1427,15 @@ Entre em contato pelo WhatsApp para atendimento.
 
 <label for="senhaAtual">
 
-    Senha atual
+  Senha atual
 
 </label>
 
 
 <input
-    type="password"
-    id="senhaAtual"
-    placeholder="Digite sua senha atual"
+  type="password"
+  id="senhaAtual"
+  placeholder="Digite sua senha atual"
 >
 
 
@@ -1409,15 +1448,15 @@ Entre em contato pelo WhatsApp para atendimento.
 
 <label for="novaSenha">
 
-    Nova senha
+  Nova senha
 
 </label>
 
 
 <input
-    type="password"
-    id="novaSenha"
-    placeholder="Mínimo de 8 caracteres"
+  type="password"
+  id="novaSenha"
+  placeholder="Mínimo de 8 caracteres"
 >
 
 
@@ -1430,37 +1469,36 @@ Entre em contato pelo WhatsApp para atendimento.
 
 <label for="confirmarNovaSenha">
 
-    Confirmar nova senha
+  Confirmar nova senha
 
 </label>
 
 
 <input
-    type="password"
-    id="confirmarNovaSenha"
-    placeholder="Repita a nova senha"
+  type="password"
+  id="confirmarNovaSenha"
+  placeholder="Repita a nova senha"
 >
 
 
 </div>
 
 
-
 <button
-    class="cta"
-    id="btnAlterarSenha"
-    type="button"
-    onclick="alterarSenhaConta()"
+  class="cta"
+  id="btnAlterarSenha"
+  type="button"
+  onclick="alterarSenhaConta()"
 >
 
-    ALTERAR SENHA
+  ALTERAR SENHA
 
 </button>
 
 
 <div
-    id="contaMensagem"
-    class="diagnostic-result"
+  id="contaMensagem"
+  class="diagnostic-result"
 >
 </div>
 
@@ -1468,19 +1506,94 @@ Entre em contato pelo WhatsApp para atendimento.
 </div>
 
 
+
+<!-- SAIR -->
 
 <div class="card form-card">
 
 
+<h3>
+
+  Sessão
+
+</h3>
+
+
 <button
-    class="cta"
-    type="button"
-    onclick="sair()"
+  class="cta"
+  type="button"
+  onclick="sair()"
 >
 
-    SAIR DA CONTA
+  SAIR DA CONTA
 
 </button>
+
+
+</div>
+
+
+
+<!-- ================================================== -->
+<!-- EXCLUIR CONTA -->
+<!-- ================================================== -->
+
+<div class="card form-card">
+
+
+<h3>
+
+  Excluir minha conta
+
+</h3>
+
+
+<p>
+
+Ao excluir sua conta, seus dados de acesso e sua
+assinatura serão removidos do MAPTORK.
+
+</p>
+
+
+<p>
+
+<strong>
+
+Esta ação não poderá ser desfeita.
+
+</strong>
+
+</p>
+
+
+<button
+  id="btnExcluirConta"
+  type="button"
+  onclick="excluirMinhaConta()"
+  style="
+    width:100%;
+    padding:14px 18px;
+    border-radius:10px;
+    border:1px solid #ff2b2b;
+    background:rgba(255,0,0,.08);
+    color:#ff3b3b;
+    font-weight:800;
+    cursor:pointer;
+  "
+>
+
+  EXCLUIR MINHA CONTA
+
+</button>
+
+
+<div
+  id="excluirContaMensagem"
+  class="diagnostic-result"
+  style="display:none"
+>
+</div>
 
 
 </div>
@@ -1490,49 +1603,146 @@ Entre em contato pelo WhatsApp para atendimento.
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- ADMIN -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <section
-    id="admin"
-    class="page"
-    style="display:none"
+  id="admin"
+  class="page"
+  style="display:none"
 >
 
 
 <h1>
 
-    Painel Administrativo
+  Painel Administrativo
 
 </h1>
 
 
 <p>
 
-Gerenciamento de usuários do MAPTORK.
+Gerenciamento do MAPTORK.
 
 </p>
 
 
 
-<div class="card admin-toolbar">
+<!-- ================================================== -->
+<!-- VALORES DOS PLANOS -->
+<!-- ================================================== -->
+
+<div class="card form-card">
+
+
+<h3>
+
+  Valores dos Planos
+
+</h3>
+
+
+<p>
+
+Defina o valor que será cobrado pela InfinitePay.
+
+</p>
+
+
+
+<div class="field">
+
+
+<label for="adminPrecoMensal">
+
+  Plano Mensal
+
+</label>
+
+
+<input
+  type="text"
+  id="adminPrecoMensal"
+  inputmode="decimal"
+  placeholder="39,90"
+>
+
+
+</div>
+
+
+
+<div class="field">
+
+
+<label for="adminPrecoTrimestral">
+
+  Plano Trimestral
+
+</label>
+
+
+<input
+  type="text"
+  id="adminPrecoTrimestral"
+  inputmode="decimal"
+  placeholder="89,90"
+>
+
+
+</div>
+
+
+
+<div class="field">
+
+
+<label for="adminPrecoAnual">
+
+  Plano Anual
+
+</label>
+
+
+<input
+  type="text"
+  id="adminPrecoAnual"
+  inputmode="decimal"
+  placeholder="297,00"
+>
+
+
+</div>
 
 
 <button
-    class="cta"
-    type="button"
-    onclick="carregarUsuariosAdmin()"
+  class="cta"
+  id="adminSalvarPrecosBtn"
+  type="button"
+  onclick="salvarPrecosAdmin()"
 >
 
-    ATUALIZAR USUÁRIOS
+  SALVAR VALORES
+
+</button>
+
+
+<button
+  class="cta admin-secondary"
+  type="button"
+  onclick="restaurarPrecosAdmin()"
+  style="margin-top:10px"
+>
+
+  RESTAURAR VALORES PADRÃO
 
 </button>
 
 
 <div
-    id="adminMensagem"
-    class="diagnostic-result"
+  id="adminPrecosMensagem"
+  class="diagnostic-result"
 >
 </div>
 
@@ -1541,16 +1751,64 @@ Gerenciamento de usuários do MAPTORK.
 
 
 
+<!-- ================================================== -->
+<!-- USUÁRIOS -->
+<!-- ================================================== -->
+
+<div class="card admin-toolbar">
+
+
+<h3>
+
+  Usuários cadastrados
+
+</h3>
+
+
+<p>
+
+Aqui você poderá visualizar também o plano,
+vencimento e dias restantes de cada usuário.
+
+</p>
+
+
+<button
+  class="cta"
+  type="button"
+  onclick="carregarUsuariosAdmin()"
+>
+
+  ATUALIZAR USUÁRIOS
+
+</button>
+
+
 <div
-    id="adminSenhaBox"
-    class="card form-card"
-    style="display:none"
+  id="adminMensagem"
+  class="diagnostic-result"
+>
+</div>
+
+
+</div>
+
+
+
+<!-- ================================================== -->
+<!-- REDEFINIR SENHA ADMIN -->
+<!-- ================================================== -->
+
+<div
+  id="adminSenhaBox"
+  class="card form-card"
+  style="display:none"
 >
 
 
 <h3>
 
-    Redefinir senha
+  Redefinir senha
 
 </h3>
 
@@ -1571,15 +1829,15 @@ Usuário:
 
 <label for="adminNovaSenha">
 
-    Nova senha
+  Nova senha
 
 </label>
 
 
 <input
-    type="password"
-    id="adminNovaSenha"
-    placeholder="Mínimo de 8 caracteres"
+  type="password"
+  id="adminNovaSenha"
+  placeholder="Mínimo de 8 caracteres"
 >
 
 
@@ -1592,49 +1850,48 @@ Usuário:
 
 <label for="adminConfirmarSenha">
 
-    Confirmar nova senha
+  Confirmar nova senha
 
 </label>
 
 
 <input
-    type="password"
-    id="adminConfirmarSenha"
-    placeholder="Repita a nova senha"
+  type="password"
+  id="adminConfirmarSenha"
+  placeholder="Repita a nova senha"
 >
 
 
 </div>
 
 
-
 <button
-    class="cta"
-    id="adminSalvarSenhaBtn"
-    type="button"
-    onclick="salvarNovaSenhaAdmin()"
+  class="cta"
+  id="adminSalvarSenhaBtn"
+  type="button"
+  onclick="salvarNovaSenhaAdmin()"
 >
 
-    SALVAR E ENVIAR POR E-MAIL
+  SALVAR E ENVIAR POR E-MAIL
 
 </button>
 
 
 <button
-    class="cta admin-secondary"
-    type="button"
-    onclick="cancelarSenhaAdmin()"
-    style="margin-top:10px"
+  class="cta admin-secondary"
+  type="button"
+  onclick="cancelarSenhaAdmin()"
+  style="margin-top:10px"
 >
 
-    CANCELAR
+  CANCELAR
 
 </button>
 
 
 <div
-    id="adminSenhaMensagem"
-    class="diagnostic-result"
+  id="adminSenhaMensagem"
+  class="diagnostic-result"
 >
 </div>
 
@@ -1643,9 +1900,14 @@ Usuário:
 
 
 
+<!-- ================================================== -->
+<!-- LISTA DE USUÁRIOS -->
+<!-- O script.js cria os cards aqui -->
+<!-- ================================================== -->
+
 <div
-    id="adminUsuarios"
-    class="admin-users"
+  id="adminUsuarios"
+  class="admin-users"
 >
 </div>
 
@@ -1654,9 +1916,9 @@ Usuário:
 
 
 
-<!-- ====================================== -->
+<!-- ================================================== -->
 <!-- RODAPÉ -->
-<!-- ====================================== -->
+<!-- ================================================== -->
 
 <div class="footer">
 
@@ -1670,12 +1932,7 @@ MAPTORK • Plataforma Premium • Produto digital
 </div>
 
 
-
 <script src="script.js"></script>
-
-
-
-
 
 
 </body>

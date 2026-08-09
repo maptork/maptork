@@ -41,6 +41,7 @@ async function login() {
     
     localStorage.setItem("token", dados.token);
     localStorage.setItem("nome", dados.nome);
+    localStorage.setItem("email", email);
     
     mostrarMensagem("Bem-vindo, " + dados.nome + "!", "sucesso");
     
