@@ -1363,3 +1363,137 @@ button{
     }
 
 }
+
+/* ========================================
+   BOTÃO / CONTÊINER DO PLANO NO TOPO
+======================================== */
+
+.plano-topo-btn{
+    width:auto;
+    min-width:125px;
+    height:42px;
+
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:0 16px;
+
+    /* mesmo estilo escuro dos contêineres */
+    background:linear-gradient(
+        145deg,
+        #151517,
+        #0b0b0d
+    );
+
+    color:#ffffff;
+
+    border:1px solid #3a3a3e;
+    border-radius:10px;
+
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.4px;
+
+    cursor:pointer;
+
+    box-shadow:none;
+
+    transition:
+        border-color .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+
+/* ========================================
+   SEM PLANO — CINZA
+======================================== */
+
+.plano-topo-btn.sem-plano{
+    border-color:#3a3a3e;
+    box-shadow:none;
+}
+
+
+/* ========================================
+   PLANO MENSAL — VERDE
+======================================== */
+
+.plano-topo-btn.plano-mensal{
+    border-color:#18d66b;
+
+    box-shadow:
+        0 0 5px rgba(24,214,107,.25);
+}
+
+
+/* ========================================
+   PLANO TRIMESTRAL — VERMELHO
+======================================== */
+
+.plano-topo-btn.plano-trimestral{
+    border-color:#ff1822;
+
+    box-shadow:
+        0 0 5px rgba(255,24,34,.25);
+}
+
+
+/* ========================================
+   PLANO ANUAL — AMARELO
+======================================== */
+
+.plano-topo-btn.plano-anual{
+    border-color:#ffc928;
+
+    box-shadow:
+        0 0 5px rgba(255,201,40,.25);
+}
+
+
+/* ========================================
+   CLIQUE
+======================================== */
+
+.plano-topo-btn:active{
+    transform:scale(.97);
+}
+
+
+/* ========================================
+   CELULAR
+======================================== */
+
+@media(max-width:600px){
+
+    .plano-topo-btn{
+        min-width:115px;
+        height:40px;
+        padding:0 13px;
+        font-size:11px;
+    }
+
+}
+
+/* TOPO NO CELULAR */
+
+@media (max-width:600px){
+
+    .top{
+        display:flex;
+        flex-direction:column;
+        align-items:stretch;
+
+        gap:10px;
+        margin-bottom:10px;
+    }
+
+    .user{
+        margin:0;
+    }
+
+    .plano-topo-btn{
+        margin:0;
+    }
+}

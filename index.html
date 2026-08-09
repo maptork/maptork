@@ -419,13 +419,14 @@ verificarSessao();
 </div>
 
 
-<input
-    id="search"
-    class="search"
-    placeholder="⌕  Buscar marca, modelo, sistema..."
-    oninput="filterBrands()"
+<button
+    id="planoTopoBtn"
+    class="plano-topo-btn sem-plano"
+    type="button"
+    onclick="showPage('assinaturas', document.querySelectorAll('.nav button')[2])"
 >
-
+    SEM PLANO
+</button>
 
 </div>
 
@@ -833,6 +834,12 @@ diagramas, catálogos e materiais técnicos.
 
 
 
+<div
+    id="pagamentoMensagem"
+    class="diagnostic-result"
+    style="display:none; margin: 0 0 18px;"
+></div>
+
 <!-- PLANOS -->
 
 <div class="planos-grid">
@@ -1147,7 +1154,7 @@ O melhor custo-benefício para acesso contínuo.
 
 <h3>
 
-    🔒 Pagamento seguro pela Lastlink
+    🔒 Pagamento seguro pela InfinitePay
 
 </h3>
 
@@ -1668,53 +1675,7 @@ MAPTORK • Plataforma Premium • Produto digital
 
 
 
-<!-- ====================================== -->
-<!-- LINKS DOS PLANOS -->
-<!-- ====================================== -->
 
-<script>
-
-function escolherPlano(plano) {
-
-
-    /*
-       Depois colocaremos aqui os links
-       reais da Lastlink.
-    */
-
-
-    if (plano === "mensal") {
-
-        console.log(
-            "Plano mensal selecionado"
-        );
-
-        return;
-    }
-
-
-    if (plano === "trimestral") {
-
-        console.log(
-            "Plano trimestral selecionado"
-        );
-
-        return;
-    }
-
-
-    if (plano === "anual") {
-
-        console.log(
-            "Plano anual selecionado"
-        );
-
-        return;
-    }
-
-}
-
-</script>
 
 
 </body>

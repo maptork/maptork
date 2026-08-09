@@ -116,8 +116,98 @@ results.innerHTML = `
   
 }
 
-function openPdf(url) {
-  window.open(url, "_blank");
+// ===================================
+// ACESSO AOS MANUAIS / ASSINATURA
+// ===================================
+
+let assinaturaAtual = {
+  carregada: false,
+  ativo: false,
+  plano: null,
+  diasRestantes: 0,
+  vencimento: ""
+};
+
+function obterEmailUsuario() {
+  return String(
+    (window.usuarioAtual && window.usuarioAtual.email) ||
+    localStorage.getItem("email") ||
+    ""
+  ).trim().toLowerCase();
+}
+
+function obterApiAssinaturas() {
+  // O MAPTORK já usa o mesmo Google Apps Script da conta.
+  // Se no futuro separar as APIs, basta definir window.ASSINATURAS_API_URL.
+  if (window.ASSINATURAS_API_URL) return window.ASSINATURAS_API_URL;
+  if (typeof AUTH_API !== "undefined") return AUTH_API;
+  return DRIVE_API_URL;
+}
+
+async function consultarAssinatura() {
+  const email = obterEmailUsuario();
+
+  if (!email) {
+    assinaturaAtual = {
+      carregada: true,
+      ativo: false,
+      plano: null,
+      diasRestantes: 0,
+      vencimento: ""
+    };
+    return assinaturaAtual;
+  }
+
+  try {
+    const api = obterApiAssinaturas();
+    const resposta = await fetch(
+      api +
+      "?acao=verificarPlano&email=" +
+      encodeURIComponent(email) +
+      "&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
+
+    const dados = await resposta.json();
+
+    assinaturaAtual = {
+      carregada: true,
+      ativo: dados.ativo === true,
+      plano: dados.plano || null,
+      diasRestantes: Number(dados.diasRestantes || 0),
+      vencimento: dados.vencimento || "",
+      status: dados.status || ""
+    };
+
+    return assinaturaAtual;
+  } catch (erro) {
+    console.error("Erro ao consultar assinatura:", erro);
+    assinaturaAtual.carregada = true;
+    return assinaturaAtual;
+  }
+}
+
+async function openPdf(url) {
+  // Guarda o manual para conseguir voltar nele após o pagamento.
+  localStorage.setItem("maptork_manual_pendente", url);
+
+  const assinatura = assinaturaAtual.carregada
+    ? assinaturaAtual
+    : await consultarAssinatura();
+
+  if (assinatura.ativo) {
+    localStorage.removeItem("maptork_manual_pendente");
+    window.open(url, "_blank");
+    return;
+  }
+
+  mostrarMensagemPagamento(
+    "Você precisa de um plano ativo para abrir este manual. Escolha um plano abaixo.",
+    false
+  );
+
+  const navAssinaturas = document.querySelectorAll('.nav button')[2];
+  showPage('assinaturas', navAssinaturas);
 }
 
 
@@ -828,12 +918,247 @@ function escapeHtml(texto) {
 
 
 
-function mostrarPagamentoPendente() {
+function mostrarMensagemPagamento(texto, sucesso = null) {
   const msg = document.getElementById("pagamentoMensagem");
-
   if (!msg) return;
 
   msg.style.display = "block";
   msg.className = "diagnostic-result";
-  msg.textContent = "Área de pagamento ainda não configurada.";
+
+  if (sucesso === true) msg.classList.add("success-box");
+  if (sucesso === false) msg.classList.add("error-box");
+
+  msg.textContent = texto;
 }
+
+function esconderMensagemPagamento() {
+  const msg = document.getElementById("pagamentoMensagem");
+  if (msg) msg.style.display = "none";
+}
+
+function normalizarPlano(plano) {
+  return String(plano || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+async function atualizarBotaoPlano() {
+  const botao = document.getElementById("planoTopoBtn");
+  if (!botao) return;
+
+  botao.classList.remove(
+    "plano-mensal",
+    "plano-trimestral",
+    "plano-anual",
+    "sem-plano"
+  );
+
+  botao.textContent = "VERIFICANDO PLANO...";
+  botao.classList.add("sem-plano");
+
+  const assinatura = await consultarAssinatura();
+
+  botao.classList.remove(
+    "plano-mensal",
+    "plano-trimestral",
+    "plano-anual",
+    "sem-plano"
+  );
+
+  if (!assinatura.ativo) {
+    botao.textContent = "SEM PLANO";
+    botao.classList.add("sem-plano");
+    return;
+  }
+
+  const plano = normalizarPlano(assinatura.plano);
+  const dias = Math.max(0, Number(assinatura.diasRestantes || 0));
+  const textoDias = dias === 1 ? "1 DIA" : dias + " DIAS";
+
+  if (plano.includes("trimestral")) {
+    botao.textContent = "TRIMESTRAL • " + textoDias;
+    botao.classList.add("plano-trimestral");
+  } else if (plano.includes("anual")) {
+    botao.textContent = "ANUAL • " + textoDias;
+    botao.classList.add("plano-anual");
+  } else {
+    botao.textContent = "MENSAL • " + textoDias;
+    botao.classList.add("plano-mensal");
+  }
+}
+
+function criarUrlRetornoPagamento() {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("pagamento", "retorno");
+  return url.toString();
+}
+
+async function escolherPlano(plano) {
+  esconderMensagemPagamento();
+
+  const email = obterEmailUsuario();
+  if (!email) {
+    mostrarMensagemPagamento(
+      "Não foi possível identificar o e-mail da sua conta. Entre novamente no MAPTORK.",
+      false
+    );
+    return;
+  }
+
+  const botoes = document.querySelectorAll(".plano-btn");
+  botoes.forEach(btn => btn.disabled = true);
+
+  mostrarMensagemPagamento("Preparando seu checkout seguro da InfinitePay...", null);
+
+  try {
+    const api = obterApiAssinaturas();
+    const retorno = criarUrlRetornoPagamento();
+
+    const url =
+      api +
+      "?acao=criarCheckout" +
+      "&email=" + encodeURIComponent(email) +
+      "&plano=" + encodeURIComponent(plano) +
+      "&retorno=" + encodeURIComponent(retorno) +
+      "&_t=" + Date.now();
+
+    const resposta = await fetch(url, { cache: "no-store" });
+    const dados = await resposta.json();
+
+    if (!dados.sucesso || !dados.checkoutUrl) {
+      throw new Error(dados.mensagem || "Não foi possível criar o checkout.");
+    }
+
+    localStorage.setItem("maptork_pedido_pendente", dados.orderNsu || "");
+    localStorage.setItem("maptork_plano_pendente", plano);
+
+    window.location.href = dados.checkoutUrl;
+  } catch (erro) {
+    console.error("Erro ao criar checkout:", erro);
+    mostrarMensagemPagamento(
+      "Não foi possível abrir o pagamento. " + (erro.message || "Tente novamente."),
+      false
+    );
+    botoes.forEach(btn => btn.disabled = false);
+  }
+}
+
+async function processarRetornoInfinitePay() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("pagamento") !== "retorno") return;
+
+  const orderNsu = params.get("order_nsu") || "";
+  const transactionNsu = params.get("transaction_nsu") || "";
+  const slug = params.get("slug") || "";
+
+  const navAssinaturas = document.querySelectorAll('.nav button')[2];
+  showPage('assinaturas', navAssinaturas);
+
+  if (!orderNsu || !transactionNsu || !slug) {
+    mostrarMensagemPagamento(
+      "Você voltou do pagamento, mas faltaram dados para confirmar a transação. Aguarde alguns segundos e atualize a página.",
+      false
+    );
+    await atualizarBotaoPlano();
+    limparParametrosPagamento();
+    return;
+  }
+
+  mostrarMensagemPagamento("Confirmando pagamento com a InfinitePay...", null);
+
+  try {
+    const api = obterApiAssinaturas();
+    const url =
+      api +
+      "?acao=confirmarPagamento" +
+      "&order_nsu=" + encodeURIComponent(orderNsu) +
+      "&transaction_nsu=" + encodeURIComponent(transactionNsu) +
+      "&slug=" + encodeURIComponent(slug) +
+      "&_t=" + Date.now();
+
+    const resposta = await fetch(url, { cache: "no-store" });
+    const dados = await resposta.json();
+
+    // O webhook pode ter processado antes do retorno. Por isso também
+    // consultamos a assinatura real da planilha.
+    const assinatura = await consultarAssinatura();
+
+    if ((dados.pago === true || dados.sucesso === true) && assinatura.ativo) {
+      mostrarMensagemPagamento(
+        "Pagamento confirmado! Seu plano está ativo por " +
+        assinatura.diasRestantes +
+        " dia(s).",
+        true
+      );
+
+      await atualizarBotaoPlano();
+      localStorage.removeItem("maptork_pedido_pendente");
+      localStorage.removeItem("maptork_plano_pendente");
+
+      const manual = localStorage.getItem("maptork_manual_pendente");
+      localStorage.removeItem("maptork_manual_pendente");
+
+      limparParametrosPagamento();
+
+      if (manual) {
+        setTimeout(() => {
+          window.location.href = manual;
+        }, 1200);
+      }
+
+      return;
+    }
+
+    mostrarMensagemPagamento(
+      dados.mensagem || "Pagamento ainda não confirmado. Aguarde alguns segundos e atualize a página.",
+      false
+    );
+
+    await atualizarBotaoPlano();
+    limparParametrosPagamento();
+  } catch (erro) {
+    console.error("Erro ao confirmar pagamento:", erro);
+    mostrarMensagemPagamento(
+      "Não foi possível confirmar o pagamento agora. Se ele já foi aprovado, o webhook atualizará sua assinatura automaticamente.",
+      false
+    );
+    await atualizarBotaoPlano();
+    limparParametrosPagamento();
+  }
+}
+
+function limparParametrosPagamento() {
+  try {
+    const url = new URL(window.location.href);
+    [
+      "pagamento",
+      "receipt_url",
+      "order_nsu",
+      "slug",
+      "capture_method",
+      "transaction_nsu"
+    ].forEach(chave => url.searchParams.delete(chave));
+
+    window.history.replaceState({}, "", url.pathname + (url.search || "") + (url.hash || ""));
+  } catch (erro) {
+    console.warn("Não foi possível limpar a URL do pagamento.", erro);
+  }
+}
+
+async function iniciarSistemaAssinaturas() {
+  // Aguarda a validação da sessão preencher o e-mail do usuário.
+  for (let tentativa = 0; tentativa < 12; tentativa++) {
+    if (obterEmailUsuario()) break;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+
+  await atualizarBotaoPlano();
+  await processarRetornoInfinitePay();
+}
+
+document.addEventListener("DOMContentLoaded", iniciarSistemaAssinaturas);
+
