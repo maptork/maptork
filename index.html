@@ -12,6 +12,17 @@
 
 <title>MAPTORK</title>
 
+<script>
+(function () {
+  try {
+    const tema = localStorage.getItem("maptork-theme");
+    if (["red", "pink", "blue"].includes(tema)) {
+      document.documentElement.setAttribute("data-theme", tema);
+    }
+  } catch (e) {}
+})();
+</script>
+
 <link rel="stylesheet" href="style.css">
 
 <style>
@@ -343,7 +354,12 @@ async function sair() {
 
   } finally {
 
+    // Mantém a preferência visual do usuário ao sair da conta.
+    const temaSalvo = localStorage.getItem("maptork-theme");
     localStorage.clear();
+    if (temaSalvo) {
+      localStorage.setItem("maptork-theme", temaSalvo);
+    }
 
 
     window.location.replace(
@@ -425,6 +441,17 @@ verificarSessao();
   onclick="showPage('conta',this)"
 >
   ♙ &nbsp; Conta
+</button>
+
+
+<button
+  id="themeMenuBtn"
+  type="button"
+  onclick="cycleMaptorkTheme()"
+  aria-label="Trocar tema"
+  title="Trocar tema"
+>
+  ◐ &nbsp; Tema
 </button>
 
 
@@ -531,6 +558,7 @@ conteúdo técnico em um só lugar.
 
 <button
   class="cta"
+  type="button"
   onclick="openPage('manuais',1)"
 >
 
@@ -772,84 +800,93 @@ conteúdo técnico em um só lugar.
 >
 
 
-<div class="card drive-search">
+  <!-- ================================================== -->
+  <!-- CAIXA SOMENTE DA BUSCA -->
+  <!-- ================================================== -->
+
+  <div class="card drive-search">
+
+    <div class="field">
+
+      <img
+        src="img/caixa-01.png"
+        class="logo"
+        alt=""
+      >
 
 
-<div class="field">
+      <label for="driveSearch">
+
+        <h4>
+          Atenção: É necessário possuir uma conta no
+          Google Drive para armazenar e gerenciar os
+          manuais.
+        </h4>
+
+        <p>
+          Buscar manual no Google Drive
+        </p>
+
+      </label>
 
 
-<img
-  src="img/caixa-01.png"
-  class="logo"
-  alt=""
->
+      <input
+        type="search"
+        id="driveSearch"
+        name="maptork_manual_search"
+        placeholder="Ex.: Honda-cb-300"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        data-form-type="other"
+        aria-autocomplete="none"
+        onkeydown="
+          if(event.key === 'Enter'){
+            event.preventDefault();
+            searchDrive();
+          }
+        "
+      >
+
+    </div>
 
 
-<label for="driveSearch">
+    <button
+      class="cta"
+      type="button"
+      onclick="searchDrive()"
+    >
+      BUSCAR PDFs
+    </button>
+
+  </div>
 
 
-<h4>
+  <!-- ================================================== -->
+  <!-- QUANTIDADE DE RESULTADOS -->
+  <!-- FORA DA CAIXA DE BUSCA -->
+  <!-- ================================================== -->
 
-Atenção: É necessário possuir uma conta no
-Google Drive para armazenar e gerenciar os
-manuais.
-
-</h4>
-
-
-<p>
-
-Buscar manual no Google Drive
-
-</p>
+  <div
+    id="driveStatus"
+    class="diagnostic-result"
+  ></div>
 
 
-</label>
+  <!-- ================================================== -->
+  <!-- MANUAIS ENCONTRADOS -->
+  <!-- CADA PDF TERÁ SUA PRÓPRIA CAIXA -->
+  <!-- ================================================== -->
 
-
-<input
-  id="driveSearch"
-  placeholder="Ex.: Honda-cb-300"
-  onkeydown="
-    if(event.key==='Enter'){
-      searchDrive()
-    }
-  "
->
-
-
-</div>
-
-
-<button
-  class="cta"
-  onclick="searchDrive()"
->
-
-  BUSCAR PDFs
-
-</button>
-
-
-<div
-  id="driveStatus"
-  class="diagnostic-result"
->
-</div>
-
-
-<div
-  id="driveResults"
-  class="drive-results"
->
-</div>
-
-
-</div>
+  <div
+    id="driveResults"
+    class="drive-results"
+  ></div>
 
 
 </section>
-
 
 
 <!-- ================================================== -->
@@ -946,29 +983,17 @@ Acesso completo com cobrança mensal.
 
 <ul class="plano-beneficios">
 
-<li>
-  Biblioteca completa de manuais
-</li>
+<li>Biblioteca completa de manuais</li>
 
-<li>
-  Atualizações frequentes
-</li>
+<li>Atualizações frequentes</li>
 
-<li>
-  Downloads ilimitados
-</li>
+<li>Downloads ilimitados</li>
 
-<li>
-  Pesquisa inteligente
-</li>
+<li>Pesquisa inteligente</li>
 
-<li>
-  Favoritos e histórico
-</li>
+<li>Favoritos e histórico</li>
 
-<li>
-  Suporte prioritário
-</li>
+<li>Suporte prioritário</li>
 
 </ul>
 
@@ -1043,29 +1068,17 @@ Economize escolhendo três meses de acesso.
 
 <ul class="plano-beneficios">
 
-<li>
-  Biblioteca completa de manuais
-</li>
+<li>Biblioteca completa de manuais</li>
 
-<li>
-  Atualizações frequentes
-</li>
+<li>Atualizações frequentes</li>
 
-<li>
-  Downloads ilimitados
-</li>
+<li>Downloads ilimitados</li>
 
-<li>
-  Pesquisa inteligente
-</li>
+<li>Pesquisa inteligente</li>
 
-<li>
-  Favoritos e histórico
-</li>
+<li>Favoritos e histórico</li>
 
-<li>
-  Suporte prioritário
-</li>
+<li>Suporte prioritário</li>
 
 </ul>
 
@@ -1140,29 +1153,17 @@ O melhor custo-benefício para acesso contínuo.
 
 <ul class="plano-beneficios">
 
-<li>
-  Biblioteca completa de manuais
-</li>
+<li>Biblioteca completa de manuais</li>
 
-<li>
-  Atualizações frequentes
-</li>
+<li>Atualizações frequentes</li>
 
-<li>
-  Downloads ilimitados
-</li>
+<li>Downloads ilimitados</li>
 
-<li>
-  Pesquisa inteligente
-</li>
+<li>Pesquisa inteligente</li>
 
-<li>
-  Favoritos e histórico
-</li>
+<li>Favoritos e histórico</li>
 
-<li>
-  Suporte prioritário
-</li>
+<li>Suporte prioritário</li>
 
 </ul>
 
@@ -1215,70 +1216,192 @@ manuais será liberado.
 <!-- ESQUEMAS -->
 <!-- ================================================== -->
 
+<!-- ================================================== -->
+<!-- ESQUEMAS ELÉTRICOS -->
+<!-- ================================================== -->
+
 <section
   id="esquemas"
   class="page"
   style="display:none"
 >
 
+  <div class="assinatura-header">
 
-<h1>
+    <h1>
+      Esquemas Elétricos
+    </h1>
 
-  Esquemas Elétricos
+    <p>
+      Materiais técnicos exclusivos para usuários
+      com assinatura ativa.
+    </p>
 
-</h1>
-
-
-<p>
-
-Acesso organizado aos esquemas por marca e modelo.
-
-</p>
-
-
-<div class="grid">
+  </div>
 
 
-<div class="card">
-
-<b>
-  ⚡ Injeção eletrônica
-</b>
-
-<p>
-  Diagramas e conexões.
-</p>
-
-</div>
+  <!-- MENSAGEM -->
+  <div
+    id="esquemasMensagem"
+    class="diagnostic-result"
+    style="display:none;margin-bottom:18px"
+  ></div>
 
 
-<div class="card">
-
-<b>
-  ⚡ Sistema de carga
-</b>
-
-<p>
-  Alternador e regulador.
-</p>
-
-</div>
+  <!-- GRID -->
+  <div class="grid">
 
 
-<div class="card">
+    <!-- ============================================== -->
+    <!-- MULTÍMETRO -->
+    <!-- ============================================== -->
 
-<b>
-  ⚡ Partida
-</b>
+    <div class="card esquema-card">
 
-<p>
-  Relés e motor de partida.
-</p>
+      <div class="esquema-icone">
+        ⚡
+      </div>
 
-</div>
+      <h3>
+        Multímetro
+      </h3>
+
+      <p class="muted">
+        Material técnico para medições,
+        testes elétricos e diagnóstico
+        utilizando multímetro.
+      </p>
+
+      
+
+      <button
+        class="cta esquema-btn"
+        type="button"
+        onclick="abrirEsquema('multimetro')"
+      >
+        ACESSAR ARQUIVO
+      </button>
+
+    </div>
 
 
-</div>
+
+    <!-- ============================================== -->
+    <!-- PINAGEM -->
+    <!-- ============================================== -->
+
+    <div class="card esquema-card">
+
+      <div class="esquema-icone">
+        🔌
+      </div>
+
+      <h3>
+        Pinagem
+      </h3>
+
+      <p class="muted">
+        Pinagens de módulos, sensores,
+        conectores e componentes elétricos.
+      </p>
+
+
+
+      <button
+        class="cta esquema-btn"
+        type="button"
+        onclick="abrirEsquema('pinagem')"
+      >
+        ACESSAR ARQUIVO
+      </button>
+
+    </div>
+
+
+
+    <!-- ============================================== -->
+    <!-- PARÂMETROS -->
+    <!-- ============================================== -->
+
+    <div class="card esquema-card">
+
+      <div class="esquema-icone">
+        📊
+      </div>
+
+      <h3>
+        Parâmetros
+      </h3>
+
+      <p class="muted">
+        Valores e parâmetros técnicos
+        utilizados no diagnóstico
+        das motocicletas.
+      </p>
+
+    
+
+      <button
+        class="cta esquema-btn"
+        type="button"
+        onclick="abrirEsquema('parametros')"
+      >
+        ACESSAR ARQUIVO
+      </button>
+
+    </div>
+
+
+
+    <!-- ============================================== -->
+    <!-- ESTATORES -->
+    <!-- ============================================== -->
+
+    <div class="card esquema-card">
+
+      <div class="esquema-icone">
+        ⚙️
+      </div>
+
+      <h3>
+        Estatores
+      </h3>
+
+      <p class="muted">
+        Informações técnicas sobre
+        estatores, bobinas e sistemas
+        de geração elétrica.
+      </p>
+
+   
+
+      <button
+        class="cta esquema-btn"
+        type="button"
+        onclick="abrirEsquema('estatores')"
+      >
+        ACESSAR ARQUIVO
+      </button>
+
+    </div>
+
+
+  </div>
+
+
+  <!-- AVISO -->
+  <div class="card esquema-aviso">
+
+    <h3>
+      🔒 Conteúdo exclusivo
+    </h3>
+
+    <p>
+      Para acessar os materiais desta área,
+      sua assinatura MAPTORK precisa estar ativa.
+    </p>
+
+  </div>
 
 
 </section>
@@ -1329,6 +1452,7 @@ Entre em contato pelo WhatsApp para atendimento.
 
 <button
   class="cta"
+  type="button"
   onclick="
     window.open(
       'https://wa.me/5561995906710',
@@ -1412,7 +1536,10 @@ Entre em contato pelo WhatsApp para atendimento.
 
 <!-- ALTERAR SENHA -->
 
-<div class="card form-card">
+<div
+  class="card form-card"
+  autocomplete="off"
+>
 
 
 <h3>
@@ -1435,7 +1562,9 @@ Entre em contato pelo WhatsApp para atendimento.
 <input
   type="password"
   id="senhaAtual"
+  name="maptork_current_password"
   placeholder="Digite sua senha atual"
+  autocomplete="current-password"
 >
 
 
@@ -1456,7 +1585,9 @@ Entre em contato pelo WhatsApp para atendimento.
 <input
   type="password"
   id="novaSenha"
+  name="maptork_new_password"
   placeholder="Mínimo de 8 caracteres"
+  autocomplete="new-password"
 >
 
 
@@ -1477,7 +1608,9 @@ Entre em contato pelo WhatsApp para atendimento.
 <input
   type="password"
   id="confirmarNovaSenha"
+  name="maptork_confirm_new_password"
   placeholder="Repita a nova senha"
+  autocomplete="new-password"
 >
 
 
@@ -1664,7 +1797,9 @@ Defina o valor que será cobrado pela InfinitePay.
 <input
   type="text"
   id="adminPrecoMensal"
+  name="maptork_admin_preco_mensal"
   inputmode="decimal"
+  autocomplete="off"
   placeholder="39,90"
 >
 
@@ -1686,7 +1821,9 @@ Defina o valor que será cobrado pela InfinitePay.
 <input
   type="text"
   id="adminPrecoTrimestral"
+  name="maptork_admin_preco_trimestral"
   inputmode="decimal"
+  autocomplete="off"
   placeholder="89,90"
 >
 
@@ -1708,7 +1845,9 @@ Defina o valor que será cobrado pela InfinitePay.
 <input
   type="text"
   id="adminPrecoAnual"
+  name="maptork_admin_preco_anual"
   inputmode="decimal"
+  autocomplete="off"
   placeholder="297,00"
 >
 
@@ -1803,6 +1942,7 @@ vencimento e dias restantes de cada usuário.
   id="adminSenhaBox"
   class="card form-card"
   style="display:none"
+  autocomplete="off"
 >
 
 
@@ -1818,6 +1958,7 @@ vencimento e dias restantes de cada usuário.
 Usuário:
 
 <strong id="adminSenhaEmail">
+
 </strong>
 
 </p>
@@ -1837,7 +1978,9 @@ Usuário:
 <input
   type="password"
   id="adminNovaSenha"
+  name="maptork_admin_new_password"
   placeholder="Mínimo de 8 caracteres"
+  autocomplete="new-password"
 >
 
 
@@ -1858,7 +2001,9 @@ Usuário:
 <input
   type="password"
   id="adminConfirmarSenha"
+  name="maptork_admin_confirm_password"
   placeholder="Repita a nova senha"
+  autocomplete="new-password"
 >
 
 
@@ -1902,7 +2047,6 @@ Usuário:
 
 <!-- ================================================== -->
 <!-- LISTA DE USUÁRIOS -->
-<!-- O script.js cria os cards aqui -->
 <!-- ================================================== -->
 
 <div
@@ -1922,7 +2066,7 @@ Usuário:
 
 <div class="footer">
 
-MAPTORK • Plataforma Premium • Produto digital
+hMAPTORK • Plataforma Premium • Produto digital
 
 </div>
 
@@ -1932,8 +2076,104 @@ MAPTORK • Plataforma Premium • Produto digital
 </div>
 
 
+
+
 <script src="script.js"></script>
 
+
+<script>
+
+// ======================================================
+// EVITAR QUE O CHROME CONFUNDA A BUSCA COM LOGIN
+// ======================================================
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+
+    const pesquisa =
+      document.getElementById(
+        "driveSearch"
+      );
+
+
+    if (pesquisa) {
+
+      pesquisa.setAttribute(
+        "type",
+        "search"
+      );
+
+      pesquisa.setAttribute(
+        "autocomplete",
+        "off"
+      );
+
+      pesquisa.setAttribute(
+        "autocorrect",
+        "off"
+      );
+
+      pesquisa.setAttribute(
+        "autocapitalize",
+        "off"
+      );
+
+      pesquisa.setAttribute(
+        "spellcheck",
+        "false"
+      );
+
+      pesquisa.setAttribute(
+        "name",
+        "maptork_manual_search"
+      );
+
+      pesquisa.setAttribute(
+        "data-form-type",
+        "other"
+      );
+
+      pesquisa.setAttribute(
+        "aria-autocomplete",
+        "none"
+      );
+
+    }
+
+  }
+);
+
+</script>
+
+
+<script>
+(function(){
+  const KEY='maptork-theme';
+  const root=document.documentElement;
+  const themes=['red','pink','blue'];
+
+  function validTheme(value){
+    return themes.includes(value) ? value : 'red';
+  }
+
+  window.applyMaptorkTheme=function(theme){
+    const value=validTheme(theme);
+    root.setAttribute('data-theme',value);
+    try { localStorage.setItem(KEY,value); } catch(e) {}
+  };
+
+  window.cycleMaptorkTheme=function(){
+    const current=validTheme(root.getAttribute('data-theme') || localStorage.getItem(KEY));
+    const next=themes[(themes.indexOf(current)+1)%themes.length];
+    applyMaptorkTheme(next);
+  };
+
+  document.addEventListener('DOMContentLoaded',function(){
+    applyMaptorkTheme(localStorage.getItem(KEY)||'red');
+  });
+})();
+</script>
 
 </body>
 

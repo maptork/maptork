@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login • MAPTORK</title>
 
+<script>
+(function(){
+  try {
+    const t=localStorage.getItem('maptork-theme');
+    if(['red','pink','blue'].includes(t)) document.documentElement.setAttribute('data-theme',t);
+  } catch(e) {}
+})();
+</script>
 <link rel="stylesheet" href="login.css">
 </head>
 

@@ -322,26 +322,30 @@ const DRIVE_API_URL =
 // PESQUISAR MANUAIS
 // ======================================================
 
-async function searchDrive() {
+// ======================================================
+// PESQUISAR MANUAIS
+// ======================================================
 
+async function searchDrive() {
+  
   const input =
     document.getElementById(
       "driveSearch"
     );
-
-
+  
+  
   const status =
     document.getElementById(
       "driveStatus"
     );
-
-
+  
+  
   const results =
     document.getElementById(
       "driveResults"
     );
-
-
+  
+  
   if (
     !input ||
     !status ||
@@ -349,156 +353,255 @@ async function searchDrive() {
   ) {
     return;
   }
-
-
+  
+  
   const q =
     input.value.trim();
-
-
+  
+  
+  // ==================================================
+  // CAMPO VAZIO
+  // ==================================================
+  
   if (!q) {
-
-    status.style.display = "block";
-
+    
+    status.style.display =
+      "block";
+    
+    
     status.innerHTML =
       "Digite a marca ou modelo.";
-
-    results.innerHTML = "";
-
+    
+    
+    results.innerHTML =
+      "";
+    
+    
     return;
   }
-
-
-  status.style.display = "block";
-
+  
+  
+  // ==================================================
+  // INICIAR PESQUISA
+  // ==================================================
+  
+  status.style.display =
+    "block";
+  
+  
   status.innerHTML =
     "Pesquisando no Google Drive...";
-
-
+  
+  
   results.innerHTML = `
+
     <div
       class="pdf-card"
-      style="text-align:center;padding:30px"
+      style="
+        display:block;
+        text-align:center;
+        padding:30px;
+      "
     >
+
       <div class="loader"></div>
 
       <p>
         Pesquisando arquivos...
       </p>
+
     </div>
+
   `;
-
-
+  
+  
   try {
-
+    
     const response =
       await fetch(
+        
         DRIVE_API_URL +
         "?q=" +
         encodeURIComponent(q)
+        
       );
-
-
+    
+    
     const data =
       await response.json();
-
-
+    
+    
+    // ==================================================
+    // NENHUM RESULTADO
+    // ==================================================
+    
     if (
       !data.ok ||
       !data.files ||
       !data.files.length
     ) {
-
+      
       status.innerHTML =
         "Nenhum PDF encontrado.";
-
-      results.innerHTML = "";
-
+      
+      
+      results.innerHTML =
+        "";
+      
+      
       return;
     }
-
-
+    
+    
+    // ==================================================
+    // QUANTIDADE ENCONTRADA
+    // ==================================================
+    
     status.innerHTML =
       data.files.length +
       " arquivo(s) encontrado(s).";
-
-
-    results.innerHTML = "";
-
-
-    data.files.forEach(function(file) {
-
-      const card =
-        document.createElement(
-          "div"
-        );
-
-
-      card.className =
-        "card";
-
-
-      const titulo =
-        document.createElement(
-          "h3"
-        );
-
-
-      titulo.textContent =
-        file.name || "Manual";
-
-
-      const botao =
-        document.createElement(
-          "button"
-        );
-
-
-      botao.className =
-        "cta";
-
-
-      botao.textContent =
-        "ABRIR PDF";
-
-
-      botao.onclick =
-        function() {
-
-          openPdf(
-            file.url
+    
+    
+    results.innerHTML =
+      "";
+    
+    
+    // ==================================================
+    // CRIAR CARD PARA CADA PDF
+    // ==================================================
+    
+    data.files.forEach(
+      function(file) {
+        
+        
+        // ----------------------------------------------
+        // CARD
+        // ----------------------------------------------
+        
+        const card =
+          document.createElement(
+            "div"
           );
-        };
-
-
-      card.appendChild(
-        titulo
-      );
-
-
-      card.appendChild(
-        botao
-      );
-
-
-      results.appendChild(
-        card
-      );
-    });
-
-
+        
+        
+        card.className =
+          "pdf-card";
+        
+        
+        // ----------------------------------------------
+        // ÍCONE
+        // ----------------------------------------------
+        
+        const icon =
+          document.createElement(
+            "div"
+          );
+        
+        
+        icon.className =
+          "pdf-icon";
+        
+        
+        icon.textContent =
+          "PDF";
+        
+        
+        // ----------------------------------------------
+        // TÍTULO
+        // ----------------------------------------------
+        
+        const titulo =
+          document.createElement(
+            "div"
+          );
+        
+        
+        titulo.className =
+          "pdf-title";
+        
+        
+        titulo.textContent =
+          file.name ||
+          "Manual";
+        
+        
+        // ----------------------------------------------
+        // BOTÃO
+        // ----------------------------------------------
+        
+        const botao =
+          document.createElement(
+            "button"
+          );
+        
+        
+        botao.className =
+          "cta";
+        
+        
+        botao.type =
+          "button";
+        
+        
+        botao.textContent =
+          "ABRIR PDF";
+        
+        
+        botao.onclick =
+          function() {
+            
+            openPdf(
+              file.url
+            );
+            
+          };
+        
+        
+        // ----------------------------------------------
+        // MONTAR CARD
+        // ----------------------------------------------
+        
+        card.appendChild(
+          icon
+        );
+        
+        
+        card.appendChild(
+          titulo
+        );
+        
+        
+        card.appendChild(
+          botao
+        );
+        
+        
+        results.appendChild(
+          card
+        );
+        
+      }
+    );
+    
+    
   } catch (erro) {
-
+    
     console.error(
       "Erro ao pesquisar:",
       erro
     );
-
-
+    
+    
     status.innerHTML =
       "Erro ao pesquisar.";
+    
+    
+    results.innerHTML =
+      "";
+    
   }
+  
 }
-
 
 // ======================================================
 // ASSINATURA ATUAL
@@ -657,7 +760,9 @@ async function openPdf(url) {
     "maptork_manual_pendente",
     url
   );
-
+if (true) {
+  
+}
 
   const assinatura =
     assinaturaAtual.carregada
@@ -701,7 +806,316 @@ async function openPdf(url) {
   );
 }
 
+// ======================================================
+// MAPTORK - ESQUEMAS ELÉTRICOS
+// ======================================================
 
+
+// ======================================================
+// LINKS DOS ARQUIVOS
+// ======================================================
+//
+// COLOQUE OS LINKS VERDADEIROS ABAIXO.
+//
+// Pode ser:
+// Google Drive
+// Google Docs
+// PDF
+// página externa
+// outro armazenamento
+//
+// ======================================================
+
+const LINKS_ESQUEMAS = {
+
+  multimetro:
+    "https://drive.google.com/file/d/1qdSeRUuaSZxTIh0QjAO3Z3Nj1OqSGU_d/view?usp=drive_link",
+
+  pinagem:
+    "COLE_AQUI_LINK_PINAGEM",
+
+  parametros:
+    "COLE_AQUI_LINK_PARAMETROS",
+
+  estatores:
+    "COLE_AQUI_LINK_ESTATORES"
+
+};
+
+
+// ======================================================
+// NOMES DOS ARQUIVOS
+// ======================================================
+
+const NOMES_ESQUEMAS = {
+
+  multimetro:
+    "Multímetro",
+
+  pinagem:
+    "Pinagem",
+
+  parametros:
+    "Parâmetros",
+
+  estatores:
+    "Estatores"
+
+};
+
+
+// ======================================================
+// MOSTRAR MENSAGEM DOS ESQUEMAS
+// ======================================================
+
+function mostrarMensagemEsquema(
+  mensagem,
+  erro = false
+) {
+
+  const box =
+    document.getElementById(
+      "esquemasMensagem"
+    );
+
+
+  if (!box) {
+    return;
+  }
+
+
+  box.style.display =
+    "block";
+
+
+  box.innerHTML =
+    mensagem;
+
+
+  if (erro) {
+  
+  box.style.borderColor =
+    "#ed1017";
+  
+}
+
+  else {
+
+    box.style.borderColor =
+      "";
+
+  }
+
+}
+
+
+// ======================================================
+// ESCONDER MENSAGEM
+// ======================================================
+
+function esconderMensagemEsquema() {
+
+  const box =
+    document.getElementById(
+      "esquemasMensagem"
+    );
+
+
+  if (!box) {
+    return;
+  }
+
+
+  box.style.display =
+    "none";
+
+
+  box.innerHTML =
+    "";
+
+}
+
+
+// ======================================================
+// ABRIR ESQUEMA
+// ======================================================
+
+async function abrirEsquema(
+  tipo
+) {
+
+  // ----------------------------------------------
+  // VALIDAR TIPO
+  // ----------------------------------------------
+
+  const link =
+    LINKS_ESQUEMAS[tipo];
+
+
+  const nome =
+    NOMES_ESQUEMAS[tipo]
+    ||
+    "Arquivo";
+
+
+  if (!link) {
+
+    mostrarMensagemEsquema(
+      "Arquivo não encontrado.",
+      true
+    );
+
+    return;
+  }
+
+
+  // ----------------------------------------------
+  // VERIFICAR SE LINK FOI CONFIGURADO
+  // ----------------------------------------------
+
+  if (
+    link.indexOf(
+      "COLE_AQUI"
+    ) !== -1
+  ) {
+
+    mostrarMensagemEsquema(
+      "⚠️ O link de " +
+      nome +
+      " ainda não foi configurado.",
+      true
+    );
+
+    return;
+  }
+
+
+  // ----------------------------------------------
+  // VERIFICANDO
+  // ----------------------------------------------
+
+  mostrarMensagemEsquema(
+    "Verificando sua assinatura..."
+  );
+
+
+  try {
+
+    // ==================================================
+    // SEMPRE CONSULTAR NOVAMENTE
+    // ==================================================
+    //
+    // Não usa somente informação antiga salva
+    // no navegador.
+    //
+    // Consulta o Apps Script novamente.
+    //
+    // ==================================================
+
+    const assinatura =
+      await consultarAssinatura();
+
+
+    // ==================================================
+    // PLANO ATIVO
+    // ==================================================
+
+    if (
+      assinatura &&
+      assinatura.ativo === true
+    ) {
+
+      mostrarMensagemEsquema(
+        "✅ Plano ativo. Abrindo " +
+        nome +
+        "..."
+      );
+
+
+      // ----------------------------------------------
+      // ABRIR LINK
+      // ----------------------------------------------
+
+      window.open(
+        link,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+
+      // ----------------------------------------------
+      // ESCONDER MENSAGEM
+      // ----------------------------------------------
+
+      setTimeout(
+        function () {
+
+          esconderMensagemEsquema();
+
+        },
+        2500
+      );
+
+
+      return;
+    }
+
+
+    // ==================================================
+    // SEM PLANO ATIVO
+    // ==================================================
+
+    mostrarMensagemEsquema(
+      "🔒 Este conteúdo é exclusivo para usuários com plano ativo.",
+      true
+    );
+
+
+    // ----------------------------------------------
+    // IR PARA MINHAS ASSINATURAS
+    // ----------------------------------------------
+
+    setTimeout(
+      function () {
+
+        const botoes =
+          document.querySelectorAll(
+            ".nav button"
+          );
+
+
+        const botaoAssinaturas =
+          botoes[2];
+
+
+        showPage(
+          "assinaturas",
+          botaoAssinaturas
+        );
+
+      },
+      1500
+    );
+
+
+  }
+
+  catch (erro) {
+
+    console.error(
+      "Erro ao abrir esquema:",
+      erro
+    );
+
+
+    mostrarMensagemEsquema(
+      "Não foi possível verificar sua assinatura. Tente novamente.",
+      true
+    );
+
+  }
+
+}
 // ======================================================
 // MINHA CONTA - ALTERAR SENHA
 // ======================================================
@@ -3429,3 +3843,4 @@ document.addEventListener(
   "DOMContentLoaded",
   iniciarSistemaAssinaturas
 );
+
