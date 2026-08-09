@@ -582,6 +582,10 @@ async function searchDrive() {
         
       }
     );
+
+    // Evita que nomes longos de arquivos deixem a pagina deslocada no celular.
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollLeft = 0;
     
     
   } catch (erro) {
