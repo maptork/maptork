@@ -833,7 +833,7 @@ if (true) {
 const LINKS_ESQUEMAS = {
 
   multimetro:
-    "https://drive.google.com/file/d/1wkDPyDyjWeGR5JatSNo4p6YjcNngY-_U/view?usp=drive_link",
+    "https://drive.google.com/file/d/1qdSeRUuaSZxTIh0QjAO3Z3Nj1OqSGU_d/view?usp=drive_link",
 
   pinagem:
     "COLE_AQUI_LINK_PINAGEM",
@@ -3847,4 +3847,250 @@ document.addEventListener(
   "DOMContentLoaded",
   iniciarSistemaAssinaturas
 );
+
+
+// ======================================================
+// MAPTORK - CALCULADORA DE PASTILHA DE VÁLVULA
+// Fórmula: folga medida + pastilha atual - folga manual
+// ======================================================
+function abrirCalculadoraPastilha() {
+  const calc = document.getElementById("calculadoraPastilha");
+  const grid = document.getElementById("esquemasGrid");
+  const aviso = document.querySelector("#esquemas .esquema-aviso");
+  const launcher = document.querySelector("#esquemas .pastilha-launcher");
+  const valoresLauncher = document.querySelector("#esquemas .valores-launcher");
+
+  if (calc) calc.style.display = "block";
+  if (grid) grid.style.display = "none";
+  if (aviso) aviso.style.display = "none";
+  if (launcher) launcher.style.display = "none";
+  if (valoresLauncher) valoresLauncher.style.display = "none";
+
+  if (calc && window.innerWidth <= 820) {
+    calc.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function fecharCalculadoraPastilha() {
+  const calc = document.getElementById("calculadoraPastilha");
+  const grid = document.getElementById("esquemasGrid");
+  const aviso = document.querySelector("#esquemas .esquema-aviso");
+  const launcher = document.querySelector("#esquemas .pastilha-launcher");
+  const valoresLauncher = document.querySelector("#esquemas .valores-launcher");
+
+  if (calc) calc.style.display = "none";
+  if (grid) grid.style.display = "grid";
+  if (aviso) aviso.style.display = "block";
+  if (launcher) launcher.style.display = "block";
+  if (valoresLauncher) valoresLauncher.style.display = "block";
+}
+
+function calcularPastilha(campo) {
+  const linha = campo.closest(".pastilha-linha");
+  if (!linha) return;
+
+  const folga = parseFloat(linha.querySelector(".pastilha-folga").value);
+  const atual = parseFloat(linha.querySelector(".pastilha-atual").value);
+  const manual = parseFloat(linha.querySelector(".pastilha-manual").value);
+  const resultado = linha.querySelector(".pastilha-resultado strong");
+
+  if (!resultado) return;
+
+  if ([folga, atual, manual].some(Number.isNaN)) {
+    resultado.textContent = "—";
+    return;
+  }
+
+  const nova = folga + atual - manual;
+  resultado.textContent = nova.toFixed(2).replace(".", ",");
+}
+
+function limparCalculadoraPastilha() {
+  const calc = document.getElementById("calculadoraPastilha");
+  if (!calc) return;
+
+  calc.querySelectorAll("input").forEach((input) => input.value = "");
+  calc.querySelectorAll(".pastilha-resultado strong").forEach((el) => el.textContent = "—");
+}
+
+
+// ======================================================\n// MAPTORK - CALCULADORA DE VALORES / IMPRESSAO EM PDF\n// ======================================================
+function abrirCalculadoraValores() {
+  const calc = document.getElementById("calculadoraValores");
+  const grid = document.getElementById("esquemasGrid");
+  const aviso = document.querySelector("#esquemas .esquema-aviso");
+  const pastilhaLauncher = document.querySelector("#esquemas .pastilha-launcher");
+  const valoresLauncher = document.querySelector("#esquemas .valores-launcher");
+
+  if (calc) calc.style.display = "block";
+  if (grid) grid.style.display = "none";
+  if (aviso) aviso.style.display = "none";
+  if (pastilhaLauncher) pastilhaLauncher.style.display = "none";
+  if (valoresLauncher) valoresLauncher.style.display = "none";
+
+  const itens = document.getElementById("valoresItens");
+  if (itens && !itens.children.length) {
+    adicionarItemValor();
+    adicionarItemValor();
+    adicionarItemValor();
+  }
+
+  if (calc && window.innerWidth <= 820) {
+    calc.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function fecharCalculadoraValores() {
+  const calc = document.getElementById("calculadoraValores");
+  const grid = document.getElementById("esquemasGrid");
+  const aviso = document.querySelector("#esquemas .esquema-aviso");
+  const pastilhaLauncher = document.querySelector("#esquemas .pastilha-launcher");
+  const valoresLauncher = document.querySelector("#esquemas .valores-launcher");
+
+  if (calc) calc.style.display = "none";
+  if (grid) grid.style.display = "grid";
+  if (aviso) aviso.style.display = "block";
+  if (pastilhaLauncher) pastilhaLauncher.style.display = "block";
+  if (valoresLauncher) valoresLauncher.style.display = "block";
+}
+
+function adicionarItemValor(descricao = "", valor = "") {
+  const lista = document.getElementById("valoresItens");
+  if (!lista) return;
+
+  const linha = document.createElement("div");
+  linha.className = "valores-item";
+  linha.innerHTML = `
+    <input class="valor-item-descricao" type="text" maxlength="100" placeholder="Ex.: Troca de óleo" aria-label="Descrição do item">
+    <input class="valor-item-valor" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor do item">
+    <button class="valores-remover" type="button" aria-label="Remover item">×</button>
+  `;
+
+  const campoDescricao = linha.querySelector(".valor-item-descricao");
+  const campoValor = linha.querySelector(".valor-item-valor");
+  const remover = linha.querySelector(".valores-remover");
+
+  campoDescricao.value = descricao;
+  campoValor.value = valor;
+  campoValor.addEventListener("input", atualizarTotalValores);
+  remover.addEventListener("click", () => {
+    linha.remove();
+    atualizarTotalValores();
+  });
+
+  lista.appendChild(linha);
+  atualizarTotalValores();
+}
+
+function numeroValorBR(valor) {
+  let texto = String(valor || "").trim().replace(/R\$/gi, "").replace(/\s/g, "");
+  if (!texto) return 0;
+
+  if (texto.includes(",")) {
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  }
+  const numero = Number(texto.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function moedaBR(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function atualizarTotalValores() {
+  const totalEl = document.getElementById("valoresTotal");
+  if (!totalEl) return;
+  let total = 0;
+  document.querySelectorAll("#valoresItens .valor-item-valor").forEach((campo) => {
+    total += numeroValorBR(campo.value);
+  });
+  totalEl.textContent = moedaBR(total);
+}
+
+
+function autoAjustarObservacao(campo) {
+  if (!campo) return;
+  campo.style.height = "auto";
+  campo.style.height = Math.min(campo.scrollHeight, 180) + "px";
+}
+
+function limparCalculadoraValores() {
+  ["valoresLoja","valoresVendedor","valoresClienteNome","valoresClienteTelefone","valoresClienteObs"].forEach((id) => {
+    const campo = document.getElementById(id);
+    if (campo) campo.value = "";
+  });
+  const lista = document.getElementById("valoresItens");
+  if (!lista) return;
+  lista.innerHTML = "";
+  adicionarItemValor();
+  adicionarItemValor();
+  adicionarItemValor();
+  atualizarTotalValores();
+}
+
+function escaparHtmlValor(texto) {
+  return String(texto || "").replace(/[&<>\"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  })[c]);
+}
+
+
+function coletarDadosCalculadoraValores() {
+  const linhas = [];
+  let total = 0;
+
+  document.querySelectorAll("#valoresItens .valores-item").forEach((linha) => {
+    const descricao = linha.querySelector(".valor-item-descricao")?.value.trim() || "";
+    const valorTexto = linha.querySelector(".valor-item-valor")?.value || "";
+    const valor = numeroValorBR(valorTexto);
+    if (!descricao && !valorTexto.trim()) return;
+    linhas.push({ descricao: descricao || "Item", valor });
+    total += valor;
+  });
+
+  return {
+    itens: linhas,
+    total,
+    data: new Date().toLocaleDateString("pt-BR"),
+    loja: document.getElementById("valoresLoja")?.value.trim() || "",
+    vendedor: document.getElementById("valoresVendedor")?.value.trim() || "",
+    clienteNome: document.getElementById("valoresClienteNome")?.value.trim() || "",
+    clienteTelefone: document.getElementById("valoresClienteTelefone")?.value.trim() || "",
+    clienteObs: document.getElementById("valoresClienteObs")?.value.trim() || ""
+  };
+}
+
+function abrirPaginaValores(nomeArquivo, mensagemVazia) {
+  const dados = coletarDadosCalculadoraValores();
+  if (!dados.itens.length) {
+    alert(mensagemVazia);
+    return;
+  }
+
+  // Os dados seguem no hash da URL. Assim a nova página funciona mesmo
+  // sem depender de localStorage e sem trocar a tela principal do site.
+  const destino = nomeArquivo + "#" + encodeURIComponent(JSON.stringify(dados));
+  const link = document.createElement("a");
+  link.href = destino;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function salvarCalculadoraValoresImagem() {
+  abrirPaginaValores(
+    "valores-imagem.html",
+    "Adicione pelo menos um item antes de gerar a imagem."
+  );
+}
+
+function imprimirCalculadoraValores() {
+  abrirPaginaValores(
+    "valores-imprimir.html",
+    "Adicione pelo menos um item antes de imprimir."
+  );
+}
 

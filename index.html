@@ -410,7 +410,7 @@ verificarSessao();
 <button
   onclick="showPage('esquemas',this)"
 >
-  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17h3l3-10 4 12 3-8h3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Esquemas</span>
+  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a4.2 4.2 0 0 0-5.5 5.5L4 17v3h3l5.2-5.2a4.2 4.2 0 0 0 5.5-5.5l-2.4 2.4-3-3z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Ferramentas</span>
 </button>
 
 
@@ -805,7 +805,7 @@ conteúdo técnico em um só lugar.
         type="search"
         id="driveSearch"
         name="maptork_manual_search"
-        placeholder="Ex.: Honda cb 300"
+        placeholder="Ex.: Honda-cb-300"
         autocomplete="off"
         autocorrect="off"
         autocapitalize="off"
@@ -962,7 +962,7 @@ Acesso completo com cobrança mensal.
 
 <li>Pesquisa inteligente</li>
 
-<li>Esquemas Elétricos</li>
+<li>Favoritos e histórico</li>
 
 <li>Suporte prioritário</li>
 
@@ -1047,7 +1047,7 @@ Economize escolhendo três meses de acesso.
 
 <li>Pesquisa inteligente</li>
 
-<li>Esquemas Elétricos</li>
+<li>Favoritos e histórico</li>
 
 <li>Suporte prioritário</li>
 
@@ -1132,7 +1132,7 @@ O melhor custo-benefício para acesso contínuo.
 
 <li>Pesquisa inteligente</li>
 
-<li>Esquemas Elétricos</li>
+<li>Favoritos e histórico</li>
 
 <li>Suporte prioritário</li>
 
@@ -1171,8 +1171,7 @@ O melhor custo-benefício para acesso contínuo.
 
 Após a confirmação do pagamento, sua assinatura
 será atualizada automaticamente e o acesso aos
-manuais será liberado. <p>
-  Vendedor: LUCAS HENRIQUE SILVA ABUD
+manuais será liberado.
 
 </p>
 
@@ -1201,11 +1200,11 @@ manuais será liberado. <p>
   <div class="assinatura-header">
 
     <h1>
-      Esquemas Elétricos
+      Ferramentas
     </h1>
 
     <p>
-      Materiais técnicos exclusivos para usuários
+      Ferramentas técnicas exclusivas para usuários
       com assinatura ativa.
     </p>
 
@@ -1220,8 +1219,170 @@ manuais será liberado. <p>
   ></div>
 
 
+  <!-- CALCULADORA DE VALORES -->
+  <div class="valores-launcher">
+    <div class="card esquema-card valores-card">
+      <div class="ferramenta-selo-gratis">Acesso grátis</div>
+      <div class="esquema-icone valores-card-icone">R$</div>
+      <h3>Calculadora de Valores</h3>
+      <p class="muted">Adicione descrições e valores, calcule o total e gere uma versão para imprimir ou salvar em PDF.</p>
+      <button
+        class="cta esquema-btn valores-open-btn"
+        type="button"
+        onclick="abrirCalculadoraValores()"
+        aria-controls="calculadoraValores"
+      >
+        ABRIR CALCULADORA
+      </button>
+    </div>
+  </div>
+
+  <div id="calculadoraValores" class="valores-calculadora" style="display:none">
+    <div class="valores-calculadora-topo">
+      <div>
+        <h3>Calculadora de Valores</h3>
+        <p>Informe a descrição e o valor de cada item.</p>
+      </div>
+      <button class="valores-fechar" type="button" onclick="fecharCalculadoraValores()" aria-label="Voltar">×</button>
+    </div>
+
+    <div class="valores-dados">
+      <label class="valores-loja-campo">
+        <span>Nome da loja</span>
+        <input id="valoresLoja" type="text" placeholder="Ex.: Oficina do João">
+      </label>
+
+      <details class="valores-dados-aba">
+        <summary>Vendedor</summary>
+        <div class="valores-dados-conteudo">
+          <label>
+            <span>Nome do vendedor</span>
+            <input id="valoresVendedor" type="text" placeholder="Ex.: João">
+          </label>
+        </div>
+      </details>
+
+      <details class="valores-dados-aba">
+        <summary>Dados do cliente</summary>
+        <div class="valores-dados-conteudo valores-cliente-grid">
+          <label>
+            <span>Nome do cliente</span>
+            <input id="valoresClienteNome" type="text" placeholder="Ex.: Carlos">
+          </label>
+          <label>
+            <span>Telefone</span>
+            <input id="valoresClienteTelefone" type="text" placeholder="Ex.: (61) 99999-9999">
+          </label>
+          <label class="valores-dados-full">
+            <span>Observação</span>
+            <textarea id="valoresClienteObs" rows="2" placeholder="Ex.: CG 160 - revisão" oninput="autoAjustarObservacao(this)"></textarea>
+          </label>
+        </div>
+      </details>
+    </div>
+
+    <div class="valores-cabecalho">
+      <span>Descrição</span>
+      <span>Valor</span>
+      <span></span>
+    </div>
+
+    <div id="valoresItens" class="valores-itens"></div>
+
+    <button class="valores-adicionar" type="button" onclick="adicionarItemValor()">+ Adicionar item</button>
+
+    <div class="valores-total-box">
+      <span>Total</span>
+      <strong id="valoresTotal">R$ 0,00</strong>
+    </div>
+
+    <div class="valores-acoes valores-acoes-principal">
+      <button class="valores-imagem" type="button" onclick="salvarCalculadoraValoresImagem()">Salvar imagem</button>
+      <button class="valores-pdf" type="button" onclick="imprimirCalculadoraValores()">Imprimir / PDF</button>
+      <button class="valores-limpar" type="button" onclick="limparCalculadoraValores()">Limpar</button>
+      <button class="valores-voltar" type="button" onclick="fecharCalculadoraValores()">Voltar</button>
+    </div>
+  </div>
+
+
+
+  <!-- CALCULADORA DE PASTILHA DE VÁLVULA -->
+  <div class="pastilha-launcher">
+    <div class="card esquema-card pastilha-card">
+      <div class="ferramenta-selo-gratis">Acesso grátis</div>
+      <div class="esquema-icone pastilha-card-icone">🔧</div>
+      <h3>Calculadora de Pastilha</h3>
+      <p class="muted">Calcule a nova pastilha pela folga medida, pastilha atual e valor do manual.</p>
+      <button
+        class="cta esquema-btn pastilha-open-btn"
+        type="button"
+        onclick="abrirCalculadoraPastilha()"
+        aria-controls="calculadoraPastilha"
+      >
+        ABRIR CALCULADORA
+      </button>
+    </div>
+  </div>
+
+  <div id="calculadoraPastilha" class="pastilha-calculadora" style="display:none">
+    <div class="pastilha-calculadora-topo">
+      <div>
+        <h3>Calculadora de Pastilha de Válvula</h3>
+        <p>Informe os valores em mm. O resultado é a nova pastilha.</p>
+      </div>
+      <button class="pastilha-fechar" type="button" onclick="fecharCalculadoraPastilha()" aria-label="Voltar">×</button>
+    </div>
+
+    <div class="pastilha-formula">Folga medida + pastilha atual − folga do manual = nova pastilha</div>
+
+    <figure class="pastilha-referencia">
+      <img src="img/dominar-400-cabecote.jpg" alt="Referência do cabeçote da Dominar 400 com posições e folgas de admissão e escape">
+    </figure>
+
+    <div class="pastilha-grid-calc">
+      <div class="pastilha-linha" data-pastilha="adm1">
+        <div class="pastilha-tipo adm">ADM 1</div>
+        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
+      </div>
+
+      <div class="pastilha-linha" data-pastilha="adm2">
+        <div class="pastilha-tipo adm">ADM 2</div>
+        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
+      </div>
+
+      <div class="pastilha-linha" data-pastilha="esc1">
+        <div class="pastilha-tipo esc">ESC 1</div>
+        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
+      </div>
+
+      <div class="pastilha-linha" data-pastilha="esc2">
+        <div class="pastilha-tipo esc">ESC 2</div>
+        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
+      </div>
+    </div>
+
+    <div class="pastilha-acoes">
+      <button class="pastilha-limpar" type="button" onclick="limparCalculadoraPastilha()">Limpar</button>
+      <button class="pastilha-voltar" type="button" onclick="fecharCalculadoraPastilha()">Voltar</button>
+    </div>
+  </div>
+
+
+
   <!-- GRID -->
-  <div class="grid">
+  <div class="grid" id="esquemasGrid">
 
 
     <!-- ============================================== -->

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>MAPTORK - Imagem de valores</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#0d1014;color:#fff;font-family:Arial,Helvetica,sans-serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:9px;padding:10px;background:#11151a;border-bottom:1px solid #2c323a}.toolbar button,.toolbar a{display:flex;align-items:center;justify-content:center;height:42px;flex:1;border-radius:9px;font-size:12px;font-weight:800;text-decoration:none;border:1px solid #343b45;color:#fff;background:#20262d}.toolbar .primary{background:#176b43;border-color:#248b5a}.wrap{padding:14px}.preview{display:block;width:min(100%,760px);height:auto;margin:0 auto;border-radius:8px;background:#fff}.msg{text-align:center;color:#aeb6c0;font-size:12px;margin:10px 0}.erro{padding:30px;text-align:center;color:#ff9299}
+</style>
+</head>
+<body>
+<div class="toolbar"><button onclick="window.close()">Voltar</button><a id="download" class="primary" href="#">Salvar PNG</a></div>
+<div class="wrap"><div class="msg">A imagem está pronta. Toque em <b>Salvar PNG</b> para guardar no dispositivo.</div><img id="preview" class="preview" alt="Orçamento MAPTORK"></div>
+<script>
+function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function gerar(d){
+ const itens=d.itens||[], W=1080, M=70, top=75, rowH=78;
+ const temMeta=!!(d.vendedor||d.clienteNome||d.clienteTelefone||d.clienteObs);
+ const metaH=temMeta?(d.clienteObs?175:145):0;
+ const H=Math.max(760,355+metaH+itens.length*rowH+210);
+ const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+
+ x.fillStyle='#fff';x.fillRect(0,0,W,H);
+ x.fillStyle='#161616';x.font='700 42px Arial';x.fillText(d.loja||'Orçamento',M,top);
+ x.fillStyle='#777';x.font='22px Arial';x.fillText('Orçamento / Serviços',M,top+40);
+ x.textAlign='right';x.fillText('Data: '+(d.data||''),W-M,top+40);x.textAlign='left';
+ x.fillStyle='#c9151e';x.fillRect(M,top+72,W-M*2,6);
+
+ let y=top+125;
+ if(temMeta){
+   const boxH=d.clienteObs?150:120;
+   x.fillStyle='#fafafa';x.fillRect(M,y,W-M*2,boxH);
+   x.strokeStyle='#ddd';x.lineWidth=2;x.strokeRect(M,y,W-M*2,boxH);
+   x.fillStyle='#333';x.font='23px Arial';
+   if(d.vendedor)x.fillText('Vendedor: '+d.vendedor,M+18,y+36);
+   if(d.clienteNome)x.fillText('Cliente: '+d.clienteNome,M+18,y+72);
+   if(d.clienteTelefone){x.textAlign='right';x.fillText('Telefone: '+d.clienteTelefone,W-M-18,y+36);x.textAlign='left'}
+   if(d.clienteObs){
+     const prefixo='Observação: ';
+     const texto=prefixo+d.clienteObs;
+     const maxW=W-M*2-36;
+     const palavras=texto.split(/\s+/);
+     let linha='', linhas=[];
+     palavras.forEach(p=>{
+       const teste=linha?linha+' '+p:p;
+       if(x.measureText(teste).width>maxW && linha){linhas.push(linha);linha=p}
+       else{linha=teste}
+     });
+     if(linha)linhas.push(linha);
+     linhas.slice(0,2).forEach((ln,i)=>x.fillText(ln,M+18,y+100+(i*28)));
+   }
+   y+=boxH+25;
+ }
+
+ const colDesc=M+100,colVal=W-M;
+ x.fillStyle='#f1f1f1';x.fillRect(M,y,W-M*2,62);
+ x.strokeStyle='#d6d6d6';x.lineWidth=2;x.strokeRect(M,y,W-M*2,62);
+ x.fillStyle='#222';x.font='700 23px Arial';
+ x.fillText('#',M+28,y+40);x.fillText('DESCRIÇÃO',colDesc,y+40);
+ x.textAlign='right';x.fillText('VALOR',colVal-18,y+40);x.textAlign='left';y+=62;
+
+ itens.forEach((it,i)=>{
+   x.fillStyle='#fff';x.fillRect(M,y,W-M*2,rowH);
+   x.strokeStyle='#ddd';x.strokeRect(M,y,W-M*2,rowH);
+   x.fillStyle='#777';x.font='27px Arial';x.fillText(String(i+1),M+28,y+49);
+   x.fillStyle='#333';let s=String(it.descricao||'Item');x.font='27px Arial';
+   while(x.measureText(s).width>550&&s.length>4)s=s.slice(0,-1);
+   if(s!==String(it.descricao||'Item'))s=s.slice(0,-1)+'…';
+   x.fillText(s,colDesc,y+49);
+   x.fillStyle='#222';x.font='700 28px Arial';x.textAlign='right';
+   x.fillText(moeda(it.valor),colVal-18,y+49);x.textAlign='left';y+=rowH
+ });
+
+ y+=35;const tw=500,tx=W-M-tw;
+ x.strokeStyle='#222';x.lineWidth=4;x.strokeRect(tx,y,tw,105);
+ x.fillStyle='#222';x.font='30px Arial';x.fillText('TOTAL',tx+28,y+65);
+ x.font='700 37px Arial';x.textAlign='right';x.fillText(moeda(d.total),tx+tw-28,y+66);x.textAlign='left';
+
+ const fy=H-75;x.strokeStyle='#ddd';x.lineWidth=2;x.beginPath();
+ x.moveTo(M,fy-35);x.lineTo(W-M,fy-35);x.stroke();
+ x.fillStyle='#888';x.font='20px Arial';x.textAlign='center';
+ x.fillText('Documento gerado pela ferramenta MAPTORK',W/2,fy-6);
+ x.fillStyle='#9a9a9a';x.font='18px Arial';
+ x.fillText('MAPTORK · Calculadora de Valores',W/2,fy+24);
+ return c.toDataURL('image/png');
+}
+try{
+ const d=JSON.parse(decodeURIComponent(location.hash.slice(1))); const data=gerar(d); document.getElementById('preview').src=data; const a=document.getElementById('download'); a.href=data; const dt=new Date(), nome=`MAPTORK_Valores_${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}.png`; a.download=nome;
+}catch(e){document.querySelector('.wrap').innerHTML='<div class="erro">Não foi possível gerar a imagem. Volte e tente novamente.</div>'}
+</script>
+</body></html>
