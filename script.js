@@ -3888,7 +3888,8 @@ function fecharCalculadoraPastilha() {
 function ativarCampoPastilha(campo) {
   if (!campo) return;
   if (campo.readOnly) campo.readOnly = false;
-  campo.setAttribute("autocomplete", "one-time-code");
+  campo.setAttribute("autocomplete", "new-password");
+  campo.setAttribute("data-form-type", "other");
 }
 
 function lerNumeroPastilha(valor) {
