@@ -1324,7 +1324,7 @@ manuais será liberado.
     </div>
   </div>
 
-  <div id="calculadoraPastilha" class="pastilha-calculadora" style="display:none">
+  <div id="calculadoraPastilha" class="pastilha-calculadora" style="display:none" autocomplete="off">
     <div class="pastilha-calculadora-topo">
       <div>
         <h3>Calculadora de Pastilha de Válvula</h3>
@@ -1342,33 +1342,33 @@ manuais será liberado.
     <div class="pastilha-grid-calc">
       <div class="pastilha-linha" data-pastilha="adm1">
         <div class="pastilha-tipo adm">ADM 1</div>
-        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Folga</span><input id="pt_adm1_folga" name="pt_adm1_folga" class="pastilha-folga" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input id="pt_adm1_atual" name="pt_adm1_atual" class="pastilha-atual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input id="pt_adm1_manual" name="pt_adm1_manual" class="pastilha-manual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
         <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
       </div>
 
       <div class="pastilha-linha" data-pastilha="adm2">
         <div class="pastilha-tipo adm">ADM 2</div>
-        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Folga</span><input id="pt_adm2_folga" name="pt_adm2_folga" class="pastilha-folga" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input id="pt_adm2_atual" name="pt_adm2_atual" class="pastilha-atual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input id="pt_adm2_manual" name="pt_adm2_manual" class="pastilha-manual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
         <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
       </div>
 
       <div class="pastilha-linha" data-pastilha="esc1">
         <div class="pastilha-tipo esc">ESC 1</div>
-        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Folga</span><input id="pt_esc1_folga" name="pt_esc1_folga" class="pastilha-folga" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input id="pt_esc1_atual" name="pt_esc1_atual" class="pastilha-atual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input id="pt_esc1_manual" name="pt_esc1_manual" class="pastilha-manual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
         <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
       </div>
 
       <div class="pastilha-linha" data-pastilha="esc2">
         <div class="pastilha-tipo esc">ESC 2</div>
-        <label><span>Folga</span><input class="pastilha-folga" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Atual</span><input class="pastilha-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
-        <label><span>Manual</span><input class="pastilha-manual" type="number" inputmode="decimal" step="0.01" placeholder="0,00" oninput="calcularPastilha(this)"></label>
+        <label><span>Folga</span><input id="pt_esc2_folga" name="pt_esc2_folga" class="pastilha-folga" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Atual</span><input id="pt_esc2_atual" name="pt_esc2_atual" class="pastilha-atual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
+        <label><span>Manual</span><input id="pt_esc2_manual" name="pt_esc2_manual" class="pastilha-manual" type="text" inputmode="decimal" enterkeyhint="next" pattern="[0-9.,]*" placeholder="0,00" autocomplete="one-time-code" aria-autocomplete="none" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" readonly onpointerdown="ativarCampoPastilha(this)" onfocus="ativarCampoPastilha(this)" oninput="calcularPastilha(this)"></label>
         <div class="pastilha-resultado"><span>Nova</span><div class="pastilha-resultado-box"><strong>—</strong><small>mm</small></div></div>
       </div>
     </div>

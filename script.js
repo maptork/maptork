@@ -3885,13 +3885,25 @@ function fecharCalculadoraPastilha() {
   if (valoresLauncher) valoresLauncher.style.display = "block";
 }
 
+function ativarCampoPastilha(campo) {
+  if (!campo) return;
+  if (campo.readOnly) campo.readOnly = false;
+  campo.setAttribute("autocomplete", "one-time-code");
+}
+
+function lerNumeroPastilha(valor) {
+  const normalizado = String(valor || "").trim().replace(",", ".");
+  const numero = Number.parseFloat(normalizado);
+  return Number.isFinite(numero) ? numero : NaN;
+}
+
 function calcularPastilha(campo) {
   const linha = campo.closest(".pastilha-linha");
   if (!linha) return;
 
-  const folga = parseFloat(linha.querySelector(".pastilha-folga").value);
-  const atual = parseFloat(linha.querySelector(".pastilha-atual").value);
-  const manual = parseFloat(linha.querySelector(".pastilha-manual").value);
+  const folga = lerNumeroPastilha(linha.querySelector(".pastilha-folga").value);
+  const atual = lerNumeroPastilha(linha.querySelector(".pastilha-atual").value);
+  const manual = lerNumeroPastilha(linha.querySelector(".pastilha-manual").value);
   const resultado = linha.querySelector(".pastilha-resultado strong");
 
   if (!resultado) return;
@@ -3909,7 +3921,7 @@ function limparCalculadoraPastilha() {
   const calc = document.getElementById("calculadoraPastilha");
   if (!calc) return;
 
-  calc.querySelectorAll("input").forEach((input) => input.value = "");
+  calc.querySelectorAll("input").forEach((input) => { input.value = ""; input.readOnly = true; });
   calc.querySelectorAll(".pastilha-resultado strong").forEach((el) => el.textContent = "—");
 }
 
