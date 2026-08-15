@@ -3885,11 +3885,38 @@ function fecharCalculadoraPastilha() {
   if (valoresLauncher) valoresLauncher.style.display = "block";
 }
 
-function ativarCampoPastilha(campo) {
+function teclaCampoPastilha(evento, campo) {
+  if (!evento) return;
+  if (evento.key === "Enter") {
+    evento.preventDefault();
+    if (campo) campo.blur();
+  }
+}
+
+function sanitizarCampoPastilha(campo) {
   if (!campo) return;
-  if (campo.readOnly) campo.readOnly = false;
-  campo.setAttribute("autocomplete", "new-password");
-  campo.setAttribute("data-form-type", "other");
+
+  const original = campo.textContent || "";
+  let valor = original.replace(/[^0-9.,]/g, "");
+
+  const primeiroSeparador = valor.search(/[.,]/);
+  if (primeiroSeparador >= 0) {
+    const inteiro = valor.slice(0, primeiroSeparador);
+    const decimal = valor.slice(primeiroSeparador + 1).replace(/[.,]/g, "");
+    valor = inteiro + valor[primeiroSeparador] + decimal;
+  }
+
+  valor = valor.slice(0, 7);
+
+  if (valor !== original) {
+    campo.textContent = valor;
+    const selecao = window.getSelection();
+    const faixa = document.createRange();
+    faixa.selectNodeContents(campo);
+    faixa.collapse(false);
+    selecao.removeAllRanges();
+    selecao.addRange(faixa);
+  }
 }
 
 function lerNumeroPastilha(valor) {
@@ -3902,9 +3929,13 @@ function calcularPastilha(campo) {
   const linha = campo.closest(".pastilha-linha");
   if (!linha) return;
 
-  const folga = lerNumeroPastilha(linha.querySelector(".pastilha-folga").value);
-  const atual = lerNumeroPastilha(linha.querySelector(".pastilha-atual").value);
-  const manual = lerNumeroPastilha(linha.querySelector(".pastilha-manual").value);
+  const folgaCampo = linha.querySelector(".pastilha-folga");
+  const atualCampo = linha.querySelector(".pastilha-atual");
+  const manualCampo = linha.querySelector(".pastilha-manual");
+
+  const folga = lerNumeroPastilha(folgaCampo ? folgaCampo.textContent : "");
+  const atual = lerNumeroPastilha(atualCampo ? atualCampo.textContent : "");
+  const manual = lerNumeroPastilha(manualCampo ? manualCampo.textContent : "");
   const resultado = linha.querySelector(".pastilha-resultado strong");
 
   if (!resultado) return;
@@ -3922,7 +3953,9 @@ function limparCalculadoraPastilha() {
   const calc = document.getElementById("calculadoraPastilha");
   if (!calc) return;
 
-  calc.querySelectorAll("input").forEach((input) => { input.value = ""; input.readOnly = true; });
+  calc.querySelectorAll(".pastilha-input").forEach((campo) => {
+    campo.textContent = "";
+  });
   calc.querySelectorAll(".pastilha-resultado strong").forEach((el) => el.textContent = "—");
 }
 
