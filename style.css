@@ -797,3 +797,96 @@ body,
 #calculadoraPastilha .pastilha-input:empty::before{content:attr(data-placeholder);color:#9b9b9b;pointer-events:none}
 #calculadoraPastilha .pastilha-input:focus{border-color:#c9151e;box-shadow:0 0 0 2px rgba(201,21,30,.08)}
 @media(max-width:600px){#calculadoraPastilha .pastilha-input{height:36px;min-height:36px;padding:0 6px;font-size:11px;line-height:34px;border-radius:8px}}
+
+
+/* =====================================================
+   BUSCA DE MANUAIS SEM AUTOFILL / GERENCIADOR DE SENHAS
+   Usa contenteditable em vez de <input> para impedir que
+   Chrome/Gboard classifiquem a busca como login/senha.
+===================================================== */
+#driveSearch.drive-search-editor{
+  width:100%;
+  min-height:48px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#0d0f13;
+  color:#f5f6f8;
+  padding:13px 14px;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+  font:inherit;
+  line-height:20px;
+  white-space:nowrap;
+  overflow:hidden;
+}
+#driveSearch.drive-search-editor:focus{
+  border-color:#555e6e;
+  box-shadow:0 0 0 3px rgba(79,140,255,.08);
+}
+#driveSearch.drive-search-editor:empty::before{
+  content:attr(data-placeholder);
+  color:#7f8792;
+  pointer-events:none;
+}
+
+
+/* =====================================================
+   MAPTORK - CALCULADORA DE VALORES SEM AUTOFILL
+   Campos contenteditable evitam a barra de senhas/cartões
+   do Chrome/Android sem alterar o funcionamento da calculadora.
+===================================================== */
+#calculadoraValores .valores-editor{
+  width:100%;
+  min-height:46px;
+  padding:0 12px;
+  border:1px solid #cfcfcf;
+  border-radius:10px;
+  background:#fff;
+  color:#171717;
+  outline:none;
+  display:flex;
+  align-items:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  cursor:text;
+  box-shadow:none;
+}
+#calculadoraValores .valores-editor:focus{
+  border-color:#c9151e;
+  box-shadow:0 0 0 2px rgba(201,21,30,.08);
+}
+#calculadoraValores .valores-editor:empty::before{
+  content:attr(data-placeholder);
+  color:#9b9b9b;
+  pointer-events:none;
+}
+#calculadoraValores .valores-editor-multiline{
+  min-height:58px;
+  max-height:180px;
+  padding:12px;
+  align-items:flex-start;
+  white-space:pre-wrap;
+  overflow-y:auto;
+  line-height:1.4;
+}
+#calculadoraValores .valores-item .valores-editor-item{
+  min-height:36px;
+  height:36px;
+  padding:0 10px;
+  border-radius:8px;
+  font-size:12px;
+}
+#calculadoraValores .valores-item .valor-item-valor{
+  justify-content:flex-end;
+  text-align:right;
+}
+@media(max-width:600px){
+  #calculadoraValores .valores-item .valores-editor-item{
+    min-height:33px;
+    height:33px;
+    padding:0 7px;
+    font-size:11px;
+    border-radius:7px;
+  }
+}

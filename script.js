@@ -64,6 +64,14 @@ const models = {
 // NAVEGAÇÃO
 // ======================================================
 
+function configurarCamposCredenciaisPorPagina(idPagina) {
+  document.querySelectorAll('input[type="password"]').forEach(function(campo) {
+    const pagina = campo.closest('.page');
+    const deveAtivar = pagina && pagina.id === idPagina;
+    campo.disabled = !deveAtivar;
+  });
+}
+
 function showPage(id, btn) {
 
   document
@@ -80,6 +88,8 @@ function showPage(id, btn) {
   if (pagina) {
     pagina.style.display = "block";
   }
+
+  configurarCamposCredenciaisPorPagina(id);
 
 
   document
@@ -356,7 +366,11 @@ async function searchDrive() {
   
   
   const q =
-    input.value.trim();
+    String(
+      typeof input.value === "string"
+        ? input.value
+        : (input.innerText || input.textContent || "")
+    ).trim();
   
   
   // ==================================================
@@ -3969,6 +3983,7 @@ function abrirCalculadoraValores() {
   const valoresLauncher = document.querySelector("#esquemas .valores-launcher");
 
   if (calc) calc.style.display = "block";
+  prepararEditoresCalculadoraValores();
   if (grid) grid.style.display = "none";
   if (aviso) aviso.style.display = "none";
   if (pastilhaLauncher) pastilhaLauncher.style.display = "none";
@@ -4007,8 +4022,8 @@ function adicionarItemValor(descricao = "", valor = "") {
   const linha = document.createElement("div");
   linha.className = "valores-item";
   linha.innerHTML = `
-    <input class="valor-item-descricao" type="text" maxlength="100" placeholder="Ex.: Troca de óleo" aria-label="Descrição do item">
-    <input class="valor-item-valor" type="text" inputmode="decimal" placeholder="0,00" aria-label="Valor do item">
+    <div class="valor-item-descricao valores-editor valores-editor-item" contenteditable="plaintext-only" inputmode="text" enterkeyhint="next" role="textbox" aria-label="Descrição do item" data-placeholder="Ex.: Troca de óleo" spellcheck="false"></div>
+    <div class="valor-item-valor valores-editor valores-editor-item" contenteditable="plaintext-only" inputmode="decimal" enterkeyhint="done" role="textbox" aria-label="Valor do item" data-placeholder="0,00" spellcheck="false"></div>
     <button class="valores-remover" type="button" aria-label="Remover item">×</button>
   `;
 
@@ -4016,8 +4031,8 @@ function adicionarItemValor(descricao = "", valor = "") {
   const campoValor = linha.querySelector(".valor-item-valor");
   const remover = linha.querySelector(".valores-remover");
 
-  campoDescricao.value = descricao;
-  campoValor.value = valor;
+  campoDescricao.textContent = descricao;
+  campoValor.textContent = valor;
   campoValor.addEventListener("input", atualizarTotalValores);
   remover.addEventListener("click", () => {
     linha.remove();
@@ -4026,6 +4041,29 @@ function adicionarItemValor(descricao = "", valor = "") {
 
   lista.appendChild(linha);
   atualizarTotalValores();
+}
+
+function prepararEditoresCalculadoraValores() {
+  const calc = document.getElementById("calculadoraValores");
+  if (!calc || calc.dataset.editoresPreparados === "1") return;
+  calc.dataset.editoresPreparados = "1";
+
+  calc.addEventListener("keydown", (event) => {
+    const campo = event.target.closest?.(".valores-editor:not(.valores-editor-multiline)");
+    if (!campo) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      campo.blur();
+    }
+  });
+
+  calc.addEventListener("paste", (event) => {
+    const campo = event.target.closest?.(".valores-editor");
+    if (!campo) return;
+    event.preventDefault();
+    const texto = (event.clipboardData || window.clipboardData)?.getData("text/plain") || "";
+    document.execCommand("insertText", false, texto);
+  });
 }
 
 function numeroValorBR(valor) {
@@ -4048,7 +4086,7 @@ function atualizarTotalValores() {
   if (!totalEl) return;
   let total = 0;
   document.querySelectorAll("#valoresItens .valor-item-valor").forEach((campo) => {
-    total += numeroValorBR(campo.value);
+    total += numeroValorBR(campo.textContent);
   });
   totalEl.textContent = moedaBR(total);
 }
@@ -4063,7 +4101,7 @@ function autoAjustarObservacao(campo) {
 function limparCalculadoraValores() {
   ["valoresLoja","valoresVendedor","valoresClienteNome","valoresClienteTelefone","valoresClienteObs"].forEach((id) => {
     const campo = document.getElementById(id);
-    if (campo) campo.value = "";
+    if (campo) campo.textContent = "";
   });
   const lista = document.getElementById("valoresItens");
   if (!lista) return;
@@ -4086,8 +4124,8 @@ function coletarDadosCalculadoraValores() {
   let total = 0;
 
   document.querySelectorAll("#valoresItens .valores-item").forEach((linha) => {
-    const descricao = linha.querySelector(".valor-item-descricao")?.value.trim() || "";
-    const valorTexto = linha.querySelector(".valor-item-valor")?.value || "";
+    const descricao = linha.querySelector(".valor-item-descricao")?.textContent.trim() || "";
+    const valorTexto = linha.querySelector(".valor-item-valor")?.textContent || "";
     const valor = numeroValorBR(valorTexto);
     if (!descricao && !valorTexto.trim()) return;
     linhas.push({ descricao: descricao || "Item", valor });
@@ -4098,11 +4136,11 @@ function coletarDadosCalculadoraValores() {
     itens: linhas,
     total,
     data: new Date().toLocaleDateString("pt-BR"),
-    loja: document.getElementById("valoresLoja")?.value.trim() || "",
-    vendedor: document.getElementById("valoresVendedor")?.value.trim() || "",
-    clienteNome: document.getElementById("valoresClienteNome")?.value.trim() || "",
-    clienteTelefone: document.getElementById("valoresClienteTelefone")?.value.trim() || "",
-    clienteObs: document.getElementById("valoresClienteObs")?.value.trim() || ""
+    loja: document.getElementById("valoresLoja")?.textContent.trim() || "",
+    vendedor: document.getElementById("valoresVendedor")?.textContent.trim() || "",
+    clienteNome: document.getElementById("valoresClienteNome")?.textContent.trim() || "",
+    clienteTelefone: document.getElementById("valoresClienteTelefone")?.textContent.trim() || "",
+    clienteObs: document.getElementById("valoresClienteObs")?.textContent.trim() || ""
   };
 }
 
@@ -4140,3 +4178,10 @@ function imprimirCalculadoraValores() {
   );
 }
 
+
+
+// Mantém campos de senha desativados fora das páginas Conta/Admin.
+document.addEventListener("DOMContentLoaded", function () {
+  const paginaVisivel = document.querySelector('.page:not([style*="display:none"])');
+  configurarCamposCredenciaisPorPagina(paginaVisivel ? paginaVisivel.id : "inicio");
+});

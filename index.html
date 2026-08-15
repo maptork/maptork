@@ -801,25 +801,23 @@ conteúdo técnico em um só lugar.
       </label>
 
 
-      <input
-        type="search"
+      <div
         id="driveSearch"
-        name="maptork_manual_search"
-        placeholder="Ex.: Honda-cb-300"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
+        class="drive-search-editor"
+        role="searchbox"
+        contenteditable="plaintext-only"
+        inputmode="search"
         enterkeyhint="search"
-        data-form-type="other"
-        aria-autocomplete="none"
+        data-placeholder="Ex.: Honda-cb-300"
+        aria-label="Buscar manual no Google Drive"
+        spellcheck="false"
         onkeydown="
           if(event.key === 'Enter'){
             event.preventDefault();
             searchDrive();
           }
         "
-      >
+      ></div>
 
     </div>
 
@@ -1249,7 +1247,7 @@ manuais será liberado.
     <div class="valores-dados">
       <label class="valores-loja-campo">
         <span>Nome da loja</span>
-        <input id="valoresLoja" type="text" placeholder="Ex.: Oficina do João">
+        <div id="valoresLoja" class="valores-editor" contenteditable="plaintext-only" inputmode="text" enterkeyhint="next" role="textbox" aria-label="Nome da loja" data-placeholder="Ex.: Oficina do João" spellcheck="false"></div>
       </label>
 
       <details class="valores-dados-aba">
@@ -1257,7 +1255,7 @@ manuais será liberado.
         <div class="valores-dados-conteudo">
           <label>
             <span>Nome do vendedor</span>
-            <input id="valoresVendedor" type="text" placeholder="Ex.: João">
+            <div id="valoresVendedor" class="valores-editor" contenteditable="plaintext-only" inputmode="text" enterkeyhint="next" role="textbox" aria-label="Nome do vendedor" data-placeholder="Ex.: João" spellcheck="false"></div>
           </label>
         </div>
       </details>
@@ -1267,15 +1265,15 @@ manuais será liberado.
         <div class="valores-dados-conteudo valores-cliente-grid">
           <label>
             <span>Nome do cliente</span>
-            <input id="valoresClienteNome" type="text" placeholder="Ex.: Carlos">
+            <div id="valoresClienteNome" class="valores-editor" contenteditable="plaintext-only" inputmode="text" enterkeyhint="next" role="textbox" aria-label="Nome do cliente" data-placeholder="Ex.: Carlos" spellcheck="false"></div>
           </label>
           <label>
             <span>Telefone</span>
-            <input id="valoresClienteTelefone" type="text" placeholder="Ex.: (61) 99999-9999">
+            <div id="valoresClienteTelefone" class="valores-editor" contenteditable="plaintext-only" inputmode="tel" enterkeyhint="next" role="textbox" aria-label="Telefone do cliente" data-placeholder="Ex.: (61) 99999-9999" spellcheck="false"></div>
           </label>
           <label class="valores-dados-full">
             <span>Observação</span>
-            <textarea id="valoresClienteObs" rows="2" placeholder="Ex.: CG 160 - revisão" oninput="autoAjustarObservacao(this)"></textarea>
+            <div id="valoresClienteObs" class="valores-editor valores-editor-multiline" contenteditable="plaintext-only" inputmode="text" role="textbox" aria-multiline="true" aria-label="Observação" data-placeholder="Ex.: CG 160 - revisão" spellcheck="false"></div>
           </label>
         </div>
       </details>
@@ -1692,6 +1690,7 @@ Entre em contato pelo WhatsApp para atendimento.
 <input
   type="password"
   id="senhaAtual"
+  disabled
   name="maptork_current_password"
   placeholder="Digite sua senha atual"
   autocomplete="current-password"
@@ -1715,6 +1714,7 @@ Entre em contato pelo WhatsApp para atendimento.
 <input
   type="password"
   id="novaSenha"
+  disabled
   name="maptork_new_password"
   placeholder="Mínimo de 8 caracteres"
   autocomplete="new-password"
@@ -1738,6 +1738,7 @@ Entre em contato pelo WhatsApp para atendimento.
 <input
   type="password"
   id="confirmarNovaSenha"
+  disabled
   name="maptork_confirm_new_password"
   placeholder="Repita a nova senha"
   autocomplete="new-password"
@@ -2108,6 +2109,7 @@ Usuário:
 <input
   type="password"
   id="adminNovaSenha"
+  disabled
   name="maptork_admin_new_password"
   placeholder="Mínimo de 8 caracteres"
   autocomplete="new-password"
@@ -2131,6 +2133,7 @@ Usuário:
 <input
   type="password"
   id="adminConfirmarSenha"
+  disabled
   name="maptork_admin_confirm_password"
   placeholder="Repita a nova senha"
   autocomplete="new-password"
@@ -2209,70 +2212,6 @@ MAPTORK • Plataforma Premium • Produto digital
 <script src="script.js"></script>
 
 
-<script>
-
-// ======================================================
-// EVITAR QUE O CHROME CONFUNDA A BUSCA COM LOGIN
-// ======================================================
-
-document.addEventListener(
-  "DOMContentLoaded",
-  function () {
-
-    const pesquisa =
-      document.getElementById(
-        "driveSearch"
-      );
-
-
-    if (pesquisa) {
-
-      pesquisa.setAttribute(
-        "type",
-        "search"
-      );
-
-      pesquisa.setAttribute(
-        "autocomplete",
-        "off"
-      );
-
-      pesquisa.setAttribute(
-        "autocorrect",
-        "off"
-      );
-
-      pesquisa.setAttribute(
-        "autocapitalize",
-        "off"
-      );
-
-      pesquisa.setAttribute(
-        "spellcheck",
-        "false"
-      );
-
-      pesquisa.setAttribute(
-        "name",
-        "maptork_manual_search"
-      );
-
-      pesquisa.setAttribute(
-        "data-form-type",
-        "other"
-      );
-
-      pesquisa.setAttribute(
-        "aria-autocomplete",
-        "none"
-      );
-
-    }
-
-  }
-);
-
-</script>
 
 
 </body>
