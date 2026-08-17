@@ -9,7 +9,7 @@
 </style>
 </head>
 <body>
-<div class="toolbar"><button onclick="window.close()">Voltar</button><a id="download" class="primary" href="#">Salvar PNG</a></div>
+<div class="toolbar"><button onclick="voltarPagina()">Voltar</button><button id="download" class="primary" type="button">Salvar PNG</button></div>
 <div class="wrap"><div class="msg">A imagem está pronta. Toque em <b>Salvar PNG</b> para guardar no dispositivo.</div><img id="preview" class="preview" alt="Orçamento MAPTORK"></div>
 <script>
 function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
@@ -84,8 +84,39 @@ function gerar(d){
  x.fillText('MAPTORK · Calculadora de Valores',W/2,fy+24);
  return c.toDataURL('image/png');
 }
+function voltarPagina(){
+ try{
+  if(window.AndroidApp && typeof window.AndroidApp.closeInternalPage==='function'){
+   window.AndroidApp.closeInternalPage();
+   return;
+  }
+ }catch(e){console.warn('Fechamento Android indisponível:',e)}
+ try{ if(window.opener){ window.close(); return; } }catch(e){}
+ try{ sessionStorage.setItem('maptork_calculadora_valores_reabrir','1'); }catch(e){}
+ if(history.length>1){ history.back(); } else { location.href='index.html'; }
+}
+function salvarPng(data,nome){
+ try{
+  if(window.AndroidApp && typeof window.AndroidApp.saveImage==='function'){
+   window.AndroidApp.saveImage(data,nome);
+   return;
+  }
+ }catch(e){console.warn('Salvamento Android indisponível:',e)}
+ const a=document.createElement('a');
+ a.href=data;
+ a.download=nome;
+ a.style.display='none';
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+}
 try{
- const d=JSON.parse(decodeURIComponent(location.hash.slice(1))); const data=gerar(d); document.getElementById('preview').src=data; const a=document.getElementById('download'); a.href=data; const dt=new Date(), nome=`MAPTORK_Valores_${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}.png`; a.download=nome;
+ const d=JSON.parse(decodeURIComponent(location.hash.slice(1)));
+ const data=gerar(d);
+ document.getElementById('preview').src=data;
+ const dt=new Date();
+ const nome=`MAPTORK_Valores_${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}.png`;
+ document.getElementById('download').addEventListener('click',()=>salvarPng(data,nome));
 }catch(e){document.querySelector('.wrap').innerHTML='<div class="erro">Não foi possível gerar a imagem. Volte e tente novamente.</div>'}
 </script>
 </body></html>

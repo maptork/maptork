@@ -30,7 +30,7 @@ html.auth-pendente body {
 // ======================================================
 
 const AUTH_API =
-"https://script.google.com/macros/s/AKfycbzScIhxB1v7f5DVtT0-p38tX2ppKj1H1kckl04aZOU3qHkcma_w10oZ-wZ5I32QTcnK/exec";
+"https://script.google.com/macros/s/AKfycbzRX5WWEj0_cD3ERlixKXqB_feiUKzqnExED5KiKYH7VOTvt_tjoqEuTC60iq5cp3Ra/exec";
 
 
 document.documentElement.classList.add(
@@ -355,6 +355,23 @@ async function sair() {
 }
 
 
+// ======================================================
+// SAIR DO APLICATIVO
+// Fecha somente o app Android e mantém a conta conectada.
+// ======================================================
+function sairDoAplicativo() {
+ try {
+  if (window.AndroidApp && typeof window.AndroidApp.closeApp === "function") {
+   window.AndroidApp.closeApp();
+   return;
+  }
+ } catch (erro) {
+  console.error("Erro ao fechar aplicativo:", erro);
+ }
+ try { window.close(); } catch (erro) {}
+}
+
+
 verificarSessao();
 
 </script>
@@ -502,9 +519,10 @@ verificarSessao();
 
 
 <img
+  id="heroImage"
   src="img/logo.png"
   class="moto-01"
-  alt="MAPTORK"
+  alt="Imagem principal MAPTORK"
 >
 
 
@@ -808,7 +826,7 @@ conteúdo técnico em um só lugar.
         contenteditable="plaintext-only"
         inputmode="search"
         enterkeyhint="search"
-        data-placeholder="Ex.: Honda-cb-300"
+        data-placeholder="Ex.: Honda cb 300"
         aria-label="Buscar manual no Google Drive"
         spellcheck="false"
         onkeydown="
@@ -1793,6 +1811,17 @@ Entre em contato pelo WhatsApp para atendimento.
 
 </button>
 
+<button
+  class="cta"
+  type="button"
+  onclick="sairDoAplicativo()"
+  style="margin-top: 12px;"
+>
+
+  SAIR DO APLICATIVO
+
+</button>
+
 
 </div>
 
@@ -2016,6 +2045,67 @@ Defina o valor que será cobrado pela InfinitePay.
 >
 </div>
 
+
+</div>
+
+
+
+<!-- ================================================== -->
+<!-- IMAGEM DA TELA INICIAL -->
+<!-- ================================================== -->
+
+<div class="card form-card admin-image-card">
+
+<h3>Imagem do Início</h3>
+
+<p class="admin-image-intro">
+Escolha uma imagem e toque em salvar.
+</p>
+
+<div class="field admin-image-select-field">
+  <label class="admin-field-label">Imagem do celular</label>
+  <input
+    type="file"
+    id="adminHeroImageFile"
+    accept="image/jpeg,image/png,image/webp"
+    onchange="aoSelecionarImagemAdmin()"
+  >
+  <label for="adminHeroImageFile" class="admin-file-picker-btn">
+    SELECIONAR IMAGEM
+  </label>
+  <div id="adminHeroImageNome" class="admin-file-name">Nenhuma imagem selecionada</div>
+  <small class="admin-image-help">JPG, PNG ou WEBP. Redução automática.</small>
+</div>
+
+<div class="admin-image-preview">
+  <img
+    id="adminHeroImagePreview"
+    src="img/logo.png"
+    alt="Pré-visualização da imagem do início"
+  >
+</div>
+
+<div class="admin-image-actions">
+  <button
+    class="admin-image-save-btn"
+    id="adminSalvarImagemBtn"
+    type="button"
+    onclick="salvarImagemInicioAdmin()"
+  >
+    SALVAR IMAGEM
+  </button>
+
+  <button
+    class="admin-image-default-btn"
+    id="adminRestaurarImagemBtn"
+    type="button"
+    onclick="restaurarImagemInicioAdmin()"
+  >
+    USAR PADRÃO
+  </button>
+</div>
+
+<div id="adminImagemMensagem" class="diagnostic-result"></div>
 
 </div>
 

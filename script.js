@@ -850,13 +850,13 @@ const LINKS_ESQUEMAS = {
     "https://drive.google.com/file/d/1qdSeRUuaSZxTIh0QjAO3Z3Nj1OqSGU_d/view?usp=drive_link",
 
   pinagem:
-    "COLE_AQUI_LINK_PINAGEM",
+    "https://drive.google.com/file/d/1O43CidjWggxFGvhevKHycuxqVSOrJiVF/view?usp=drivesdk",
 
   parametros:
-    "COLE_AQUI_LINK_PARAMETROS",
+    "https://drive.google.com/file/d/1endRtCcb1c_nMfSDD3ULlcGdml4ttl2a/view?usp=drivesdk",
 
   estatores:
-    "COLE_AQUI_LINK_ESTATORES"
+    "https://drive.google.com/file/d/1GRKeKfKQfW2AbTsKwDg08yVtuCGPzLRW/view?usp=drivesdk"
 
 };
 
@@ -1624,6 +1624,508 @@ let adminEmailSelecionado =
 
 
 // ======================================================
+// ADMIN - IMAGEM DO INÍCIO (GOOGLE APPS SCRIPT)
+// ======================================================
+
+const MAPTORK_HERO_IMAGE_PADRAO = "img/logo.png";
+const MAPTORK_IMAGEM_MAX_LADO = 1600;
+const MAPTORK_IMAGEM_MAX_BYTES = 12 * 1024 * 1024;
+const MAPTORK_IMAGEM_MAX_FINAL_BYTES = 10 * 1024 * 1024;
+const MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES = 3 * 1024 * 1024;
+let maptorkHeroImageUrlAtual = "";
+let maptorkHeroImageDataUrlAtual = "";
+let maptorkHeroUploadSelecionado = null;
+
+// Cache persistente da imagem principal no próprio aparelho/navegador.
+// Isso evita voltar para a imagem padrão ao fechar/reabrir o app caso
+// a consulta ao Google Script demore ou falhe momentaneamente.
+const MAPTORK_HERO_CACHE_DB = "maptork_ui_cache";
+const MAPTORK_HERO_CACHE_STORE = "config";
+const MAPTORK_HERO_CACHE_KEY = "heroImage";
+
+function abrirBancoCacheImagemInicio() {
+  return new Promise(function(resolve, reject) {
+    if (!window.indexedDB) {
+      reject(new Error("IndexedDB indisponível."));
+      return;
+    }
+
+    const pedido = indexedDB.open(MAPTORK_HERO_CACHE_DB, 1);
+
+    pedido.onupgradeneeded = function(evento) {
+      const banco = evento.target.result;
+      if (!banco.objectStoreNames.contains(MAPTORK_HERO_CACHE_STORE)) {
+        banco.createObjectStore(MAPTORK_HERO_CACHE_STORE);
+      }
+    };
+
+    pedido.onsuccess = function() { resolve(pedido.result); };
+    pedido.onerror = function() { reject(pedido.error || new Error("Erro ao abrir cache.")); };
+  });
+}
+
+async function salvarImagemInicioCacheLocal(src) {
+  const valor = String(src || "").trim();
+  if (!valor) return;
+
+  try {
+    const banco = await abrirBancoCacheImagemInicio();
+    await new Promise(function(resolve, reject) {
+      const tx = banco.transaction(MAPTORK_HERO_CACHE_STORE, "readwrite");
+      tx.objectStore(MAPTORK_HERO_CACHE_STORE).put(valor, MAPTORK_HERO_CACHE_KEY);
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error || new Error("Erro ao salvar cache.")); };
+      tx.onabort = function() { reject(tx.error || new Error("Cache cancelado.")); };
+    });
+    banco.close();
+  } catch (erro) {
+    console.warn("Não foi possível salvar o cache local da imagem:", erro);
+  }
+}
+
+async function obterImagemInicioCacheLocal() {
+  try {
+    const banco = await abrirBancoCacheImagemInicio();
+    const valor = await new Promise(function(resolve, reject) {
+      const tx = banco.transaction(MAPTORK_HERO_CACHE_STORE, "readonly");
+      const pedido = tx.objectStore(MAPTORK_HERO_CACHE_STORE).get(MAPTORK_HERO_CACHE_KEY);
+      pedido.onsuccess = function() { resolve(String(pedido.result || "").trim()); };
+      pedido.onerror = function() { reject(pedido.error || new Error("Erro ao ler cache.")); };
+    });
+    banco.close();
+    return valor;
+  } catch (erro) {
+    return "";
+  }
+}
+
+async function apagarImagemInicioCacheLocal() {
+  try {
+    const banco = await abrirBancoCacheImagemInicio();
+    await new Promise(function(resolve, reject) {
+      const tx = banco.transaction(MAPTORK_HERO_CACHE_STORE, "readwrite");
+      tx.objectStore(MAPTORK_HERO_CACHE_STORE).delete(MAPTORK_HERO_CACHE_KEY);
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error || new Error("Erro ao apagar cache.")); };
+    });
+    banco.close();
+  } catch (erro) {
+    console.warn("Não foi possível apagar o cache local da imagem:", erro);
+  }
+}
+
+function normalizarLinkImagemAdmin(link) {
+  const valor = String(link || "").trim();
+  if (!valor) return MAPTORK_HERO_IMAGE_PADRAO;
+
+  let achou = valor.match(/drive\.google\.com\/file\/d\/([^/?#]+)/i);
+  if (achou && achou[1]) {
+    return "https://drive.google.com/thumbnail?id=" +
+      encodeURIComponent(achou[1]) + "&sz=w1600";
+  }
+
+  achou = valor.match(/[?&]id=([^&#]+)/i);
+  if (valor.indexOf("drive.google.com") !== -1 && achou && achou[1]) {
+    let id = achou[1];
+    try { id = decodeURIComponent(id); } catch (erro) {}
+    return "https://drive.google.com/thumbnail?id=" +
+      encodeURIComponent(id) + "&sz=w1600";
+  }
+
+  return valor;
+}
+
+function definirImagemComFallback(elemento, link) {
+  if (!elemento) return;
+  const valor = String(link || "").trim();
+  const destino = valor.indexOf("data:image/") === 0
+    ? valor
+    : normalizarLinkImagemAdmin(valor);
+  elemento.onerror = function() {
+    this.onerror = null;
+    this.src = MAPTORK_HERO_IMAGE_PADRAO;
+  };
+  elemento.src = destino || MAPTORK_HERO_IMAGE_PADRAO;
+}
+
+function mostrarMensagemImagemAdmin(texto, sucesso) {
+  const msg = document.getElementById("adminImagemMensagem");
+  if (!msg) return;
+  msg.style.display = "block";
+  msg.className = sucesso
+    ? "diagnostic-result success-box"
+    : "diagnostic-result error-box";
+  msg.textContent = texto;
+}
+
+function atualizarNomeArquivoImagemAdmin(texto) {
+  const nome = document.getElementById("adminHeroImageNome");
+  if (nome) {
+    nome.textContent = texto || "Nenhuma imagem selecionada";
+  }
+}
+
+function limparSelecaoImagemAdmin(manterPreviewAtual) {
+  maptorkHeroUploadSelecionado = null;
+  const input = document.getElementById("adminHeroImageFile");
+  if (input) input.value = "";
+  atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
+
+  if (manterPreviewAtual) {
+    const imagemAtual = maptorkHeroImageDataUrlAtual || maptorkHeroImageUrlAtual || MAPTORK_HERO_IMAGE_PADRAO;
+    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), imagemAtual);
+  }
+}
+
+function lerArquivoComoDataUrl(arquivo) {
+  return new Promise(function(resolve, reject) {
+    const leitor = new FileReader();
+    leitor.onload = function() { resolve(String(leitor.result || "")); };
+    leitor.onerror = function() { reject(new Error("Não foi possível ler a imagem.")); };
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
+function carregarImagemDataUrl(dataUrl) {
+  return new Promise(function(resolve, reject) {
+    const img = new Image();
+    img.onload = function() { resolve(img); };
+    img.onerror = function() { reject(new Error("A imagem selecionada não pôde ser aberta.")); };
+    img.src = dataUrl;
+  });
+}
+
+function gerarNomeImagemUploadAdmin(nomeOriginal, mimeType) {
+  let base = String(nomeOriginal || "maptork_inicio")
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  if (!base) base = "maptork_inicio";
+
+  let ext = "jpg";
+  if (mimeType === "image/png") ext = "png";
+  if (mimeType === "image/webp") ext = "webp";
+  return base + "." + ext;
+}
+
+function extrairBase64DeDataUrl(dataUrl) {
+  const partes = String(dataUrl || "").split(",");
+  return partes.length > 1 ? partes[1] : "";
+}
+
+function tamanhoBase64EmBytes(base64) {
+  const valor = String(base64 || "");
+  if (!valor) return 0;
+
+  let padding = 0;
+  if (valor.endsWith("==")) padding = 2;
+  else if (valor.endsWith("=")) padding = 1;
+
+  return Math.max(0, Math.floor((valor.length * 3) / 4) - padding);
+}
+
+async function prepararArquivoImagemAdmin(arquivo) {
+  if (!arquivo) throw new Error("Escolha uma imagem do celular.");
+  if (!String(arquivo.type || "").toLowerCase().startsWith("image/")) {
+    throw new Error("Selecione um arquivo de imagem válido.");
+  }
+  if (arquivo.size > MAPTORK_IMAGEM_MAX_BYTES) {
+    throw new Error("A imagem é muito grande. Escolha uma imagem de até 12 MB.");
+  }
+
+  const dataUrlOriginal = await lerArquivoComoDataUrl(arquivo);
+  const imagem = await carregarImagemDataUrl(dataUrlOriginal);
+  let largura = imagem.naturalWidth || imagem.width || 0;
+  let altura = imagem.naturalHeight || imagem.height || 0;
+  if (!largura || !altura) throw new Error("Não foi possível identificar o tamanho da imagem.");
+
+  const escala = Math.min(1, MAPTORK_IMAGEM_MAX_LADO / largura, MAPTORK_IMAGEM_MAX_LADO / altura);
+  largura = Math.max(1, Math.round(largura * escala));
+  altura = Math.max(1, Math.round(altura * escala));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = largura;
+  canvas.height = altura;
+  const ctx = canvas.getContext("2d", { alpha: true });
+  if (!ctx) throw new Error("Não foi possível preparar a imagem.");
+  ctx.clearRect(0, 0, largura, altura);
+  ctx.drawImage(imagem, 0, 0, largura, altura);
+
+  let mimeType = String(arquivo.type || "").toLowerCase() === "image/png" ? "image/png" : "image/jpeg";
+  let qualidade = mimeType === "image/png" ? undefined : 0.92;
+  let dataUrl = canvas.toDataURL(mimeType, qualidade);
+  let base64 = extrairBase64DeDataUrl(dataUrl);
+
+  // O app continua aceitando até 10 MB finais, mas tenta manter a imagem
+  // de exibição perto de 3 MB. Isso deixa a recuperação após fechar/reabrir
+  // o aplicativo muito mais confiável.
+  if (mimeType === "image/jpeg") {
+    while (tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES && qualidade > 0.55) {
+      qualidade = Number((qualidade - 0.07).toFixed(2));
+      dataUrl = canvas.toDataURL("image/jpeg", qualidade);
+      base64 = extrairBase64DeDataUrl(dataUrl);
+    }
+  } else if (mimeType === "image/png" && tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES) {
+    // WEBP preserva transparência e costuma ficar bem menor que PNG.
+    const tentativasWebp = [0.92, 0.84, 0.76];
+    for (let i = 0; i < tentativasWebp.length; i++) {
+      const candidato = canvas.toDataURL("image/webp", tentativasWebp[i]);
+      if (candidato.indexOf("data:image/webp") === 0) {
+        const candidatoBase64 = extrairBase64DeDataUrl(candidato);
+        dataUrl = candidato;
+        base64 = candidatoBase64;
+        mimeType = "image/webp";
+        qualidade = tentativasWebp[i];
+        if (tamanhoBase64EmBytes(base64) <= MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES) break;
+      }
+    }
+  }
+
+  if (tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_MAX_FINAL_BYTES) {
+    throw new Error("A imagem final ficou maior que 10 MB. Escolha outra imagem ou use JPG.");
+  }
+
+  return {
+    fileName: gerarNomeImagemUploadAdmin(arquivo.name, mimeType),
+    mimeType: mimeType,
+    dataUrl: dataUrl,
+    base64: base64
+  };
+}
+
+async function aoSelecionarImagemAdmin() {
+  const input = document.getElementById("adminHeroImageFile");
+  if (!input || !input.files || !input.files[0]) {
+    limparSelecaoImagemAdmin(true);
+    return;
+  }
+
+  const arquivo = input.files[0];
+  atualizarNomeArquivoImagemAdmin(arquivo.name || "Imagem selecionada");
+
+  try {
+    mostrarMensagemImagemAdmin("Preparando imagem...", true);
+    const pacote = await prepararArquivoImagemAdmin(arquivo);
+    maptorkHeroUploadSelecionado = pacote;
+    const preview = document.getElementById("adminHeroImagePreview");
+    if (preview) {
+      preview.onerror = null;
+      preview.src = pacote.dataUrl;
+    }
+    mostrarMensagemImagemAdmin("Imagem pronta para salvar.", true);
+  } catch (erro) {
+    console.error("Erro ao preparar imagem:", erro);
+    limparSelecaoImagemAdmin(true);
+    mostrarMensagemImagemAdmin((erro && erro.message) || "Não foi possível preparar a imagem selecionada.", false);
+  }
+}
+
+async function carregarImagemInicioServidor() {
+  // Mostra primeiro a última imagem salva no aparelho. Ela permanece mesmo
+  // depois de fechar o aplicativo ou sair da conta.
+  const cacheLocal = await obterImagemInicioCacheLocal();
+
+  if (cacheLocal) {
+    maptorkHeroImageDataUrlAtual = cacheLocal.indexOf("data:image/") === 0 ? cacheLocal : "";
+    maptorkHeroImageUrlAtual = maptorkHeroImageDataUrlAtual ? "" : cacheLocal;
+    definirImagemComFallback(document.getElementById("heroImage"), cacheLocal);
+    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), cacheLocal);
+  }
+
+  try {
+    const resposta = await fetch(
+      AUTH_API + "?action=obterImagemInicio&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
+
+    const dados = await resposta.json();
+    if (!dados || dados.ok !== true) {
+      throw new Error((dados && dados.mensagem) || "Resposta inválida.");
+    }
+
+    maptorkHeroImageUrlAtual = String(dados.url || "").trim();
+    maptorkHeroImageDataUrlAtual = String(dados.dataUrl || "").trim();
+
+    const imagemServidor =
+      maptorkHeroImageDataUrlAtual ||
+      maptorkHeroImageUrlAtual ||
+      "";
+
+    if (imagemServidor) {
+      definirImagemComFallback(document.getElementById("heroImage"), imagemServidor);
+      definirImagemComFallback(document.getElementById("adminHeroImagePreview"), imagemServidor);
+      await salvarImagemInicioCacheLocal(imagemServidor);
+      return imagemServidor;
+    }
+
+    // Se o servidor informa que não existe imagem personalizada, usa a padrão
+    // e remove qualquer cache antigo.
+    await apagarImagemInicioCacheLocal();
+    maptorkHeroImageUrlAtual = "";
+    maptorkHeroImageDataUrlAtual = "";
+    definirImagemComFallback(document.getElementById("heroImage"), MAPTORK_HERO_IMAGE_PADRAO);
+    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), MAPTORK_HERO_IMAGE_PADRAO);
+    return MAPTORK_HERO_IMAGE_PADRAO;
+
+  } catch (erro) {
+    console.warn("Não foi possível atualizar a imagem pelo servidor:", erro);
+
+    // Nunca volta para a moto padrão só porque houve falha de rede/Google Script.
+    // Mantém a última imagem que já estava salva no aparelho.
+    if (cacheLocal) {
+      definirImagemComFallback(document.getElementById("heroImage"), cacheLocal);
+      definirImagemComFallback(document.getElementById("adminHeroImagePreview"), cacheLocal);
+      return cacheLocal;
+    }
+
+    definirImagemComFallback(document.getElementById("heroImage"), MAPTORK_HERO_IMAGE_PADRAO);
+    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), MAPTORK_HERO_IMAGE_PADRAO);
+    return "";
+  }
+}
+
+async function salvarImagemInicioAdmin() {
+  const botao = document.getElementById("adminSalvarImagemBtn");
+  const token = localStorage.getItem("token") || "";
+  if (!token) {
+    mostrarMensagemImagemAdmin("Sessão inválida. Entre novamente na conta.", false);
+    return;
+  }
+
+  if (!maptorkHeroUploadSelecionado || !maptorkHeroUploadSelecionado.base64) {
+    const input = document.getElementById("adminHeroImageFile");
+    if (input && input.files && input.files[0]) {
+      try {
+        atualizarNomeArquivoImagemAdmin(input.files[0].name || "Imagem selecionada");
+        mostrarMensagemImagemAdmin("Preparando imagem...", true);
+        maptorkHeroUploadSelecionado = await prepararArquivoImagemAdmin(input.files[0]);
+      } catch (erro) {
+        mostrarMensagemImagemAdmin((erro && erro.message) || "Não foi possível preparar a imagem.", false);
+        return;
+      }
+    }
+  }
+
+  if (!maptorkHeroUploadSelecionado || !maptorkHeroUploadSelecionado.base64) {
+    mostrarMensagemImagemAdmin("Toque em SELECIONAR IMAGEM e escolha uma foto antes de salvar.", false);
+    return;
+  }
+
+  if (botao) {
+    botao.disabled = true;
+    botao.textContent = "ENVIANDO...";
+  }
+  mostrarMensagemImagemAdmin("Enviando imagem para o Google Script...", true);
+
+  try {
+    const form = new URLSearchParams();
+    form.set("action", "adminSalvarImagemInicio");
+    form.set("token", token);
+    form.set("fileName", maptorkHeroUploadSelecionado.fileName);
+    form.set("mimeType", maptorkHeroUploadSelecionado.mimeType);
+    form.set("imageBase64", maptorkHeroUploadSelecionado.base64);
+
+    // A action vai também na URL para o Apps Script reconhecer a rota
+    // mesmo que o corpo do POST seja processado de forma diferente no WebView.
+    const resposta = await fetch(
+      AUTH_API + "?action=adminSalvarImagemInicio&_t=" + Date.now(),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: form.toString()
+      }
+    );
+
+    const dados = await resposta.json();
+    if (!dados || dados.ok !== true) {
+      const mensagemServidor = String((dados && dados.mensagem) || "").trim();
+      mostrarMensagemImagemAdmin(
+        mensagemServidor || "Não foi possível salvar a imagem no servidor.",
+        false
+      );
+      return;
+    }
+
+    maptorkHeroImageUrlAtual = String(dados.url || "").trim();
+    maptorkHeroImageDataUrlAtual = String(
+      dados.dataUrl || maptorkHeroUploadSelecionado.dataUrl || ""
+    ).trim();
+
+    const imagemSalva =
+      maptorkHeroImageDataUrlAtual ||
+      maptorkHeroImageUrlAtual ||
+      MAPTORK_HERO_IMAGE_PADRAO;
+
+    definirImagemComFallback(document.getElementById("heroImage"), imagemSalva);
+    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), imagemSalva);
+    await salvarImagemInicioCacheLocal(imagemSalva);
+    limparSelecaoImagemAdmin(false);
+    mostrarMensagemImagemAdmin("Imagem enviada com sucesso.", true);
+  } catch (erro) {
+    console.error("Erro ao salvar imagem no servidor:", erro);
+    mostrarMensagemImagemAdmin("Erro ao conectar com o Google Script.", false);
+  } finally {
+    if (botao) {
+      botao.disabled = false;
+      botao.textContent = "SALVAR IMAGEM";
+    }
+  }
+}
+
+async function restaurarImagemInicioAdmin() {
+  const token = localStorage.getItem("token") || "";
+  if (!token) {
+    mostrarMensagemImagemAdmin("Sessão inválida. Entre novamente na conta.", false);
+    return;
+  }
+
+  const confirmou = window.confirm("Deseja restaurar a imagem padrão da moto no início?");
+  if (!confirmou) return;
+
+  try {
+    const form = new URLSearchParams();
+    form.set("action", "adminRestaurarImagemInicio");
+    form.set("token", token);
+
+    const resposta = await fetch(
+      AUTH_API + "?action=adminRestaurarImagemInicio&_t=" + Date.now(),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: form.toString()
+      }
+    );
+    const dados = await resposta.json();
+
+    if (!dados || dados.ok !== true) {
+      mostrarMensagemImagemAdmin((dados && dados.mensagem) || "Não foi possível restaurar a imagem padrão.", false);
+      return;
+    }
+
+    maptorkHeroImageUrlAtual = "";
+    maptorkHeroImageDataUrlAtual = "";
+    await apagarImagemInicioCacheLocal();
+    limparSelecaoImagemAdmin(false);
+    definirImagemComFallback(document.getElementById("heroImage"), MAPTORK_HERO_IMAGE_PADRAO);
+    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), MAPTORK_HERO_IMAGE_PADRAO);
+    mostrarMensagemImagemAdmin("Imagem padrão da moto restaurada para todos.", true);
+  } catch (erro) {
+    console.error("Erro ao restaurar imagem:", erro);
+    mostrarMensagemImagemAdmin("Erro ao conectar com o Google Script.", false);
+  }
+}
+
+async function prepararImagemAdmin() {
+  await carregarImagemInicioServidor();
+  atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
+}
+
+// ======================================================
 // ABRIR ADMIN
 // ======================================================
 
@@ -1647,6 +2149,8 @@ async function abrirAdmin(botao) {
 
 
   await carregarPrecosPlanos();
+
+  await prepararImagemAdmin();
 
   await carregarUsuariosAdmin();
 }
@@ -1799,9 +2303,38 @@ async function carregarUsuariosAdmin() {
     }
 
 
+    const totalUsuarios =
+      dados.usuarios.length;
+
+
+    const totalPlanosAtivos =
+      dados.usuarios.filter(
+        function(usuario) {
+          return (
+            usuario.assinaturaAtiva ===
+            true
+          );
+        }
+      ).length;
+
+
+    const textoUsuarios =
+      totalUsuarios === 1
+        ? "1 usuário"
+        : totalUsuarios + " usuários";
+
+
+    const textoPlanosAtivos =
+      totalPlanosAtivos === 1
+        ? "1 plano ativo"
+        : totalPlanosAtivos + " planos ativos";
+
+
     mostrarAdminMensagem(
-      dados.usuarios.length +
-      " usuário(s) encontrado(s).",
+      textoUsuarios +
+      " • " +
+      textoPlanosAtivos +
+      ".",
       true
     );
 
@@ -1901,6 +2434,55 @@ async function carregarUsuariosAdmin() {
         }
 
 
+        let classeCorPlano =
+          "";
+
+
+        if (
+          usuario.assinaturaAtiva === true
+        ) {
+
+          const planoNormalizado =
+            String(
+              usuario.plano || ""
+            )
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .trim()
+              .toLowerCase();
+
+
+          if (
+            planoNormalizado.indexOf("mensal") !== -1
+          ) {
+
+            classeCorPlano =
+              "admin-user-plan-mensal";
+
+          } else if (
+            planoNormalizado.indexOf("trimestral") !== -1
+          ) {
+
+            classeCorPlano =
+              "admin-user-plan-trimestral";
+
+          } else if (
+            planoNormalizado.indexOf("anual") !== -1
+          ) {
+
+            classeCorPlano =
+              "admin-user-plan-anual";
+
+          } else {
+
+            classeCorPlano =
+              "admin-user-plan-active";
+
+          }
+
+        }
+
+
         card.innerHTML = `
 
           <h3>
@@ -1956,9 +2538,11 @@ async function carregarUsuariosAdmin() {
               Plano:
             </strong>
 
-            ${escapeHtml(
-              planoTexto
-            )}
+            <span class="${classeCorPlano}">
+              ${escapeHtml(
+                planoTexto
+              )}
+            </span>
           </p>
 
 
@@ -3842,6 +4426,9 @@ async function iniciarSistemaAssinaturas() {
   await carregarPrecosPlanos();
 
 
+  await carregarImagemInicioServidor(false);
+
+
   // Atualizar plano no topo.
 
   await atualizarBotaoPlano();
@@ -3975,6 +4562,70 @@ function limparCalculadoraPastilha() {
 
 
 // ======================================================\n// MAPTORK - CALCULADORA DE VALORES / IMPRESSAO EM PDF\n// ======================================================
+const MAPTORK_VALORES_ESTADO = "maptork_calculadora_valores_estado_v3";
+const MAPTORK_VALORES_REABRIR = "maptork_calculadora_valores_reabrir";
+
+function capturarEstadoCalculadoraValores() {
+  const itens = [];
+  document.querySelectorAll("#valoresItens .valores-item").forEach((linha) => {
+    itens.push({
+      descricao: linha.querySelector(".valor-item-descricao")?.textContent || "",
+      valor: linha.querySelector(".valor-item-valor")?.textContent || ""
+    });
+  });
+
+  return {
+    loja: document.getElementById("valoresLoja")?.textContent || "",
+    vendedor: document.getElementById("valoresVendedor")?.textContent || "",
+    clienteNome: document.getElementById("valoresClienteNome")?.textContent || "",
+    clienteTelefone: document.getElementById("valoresClienteTelefone")?.textContent || "",
+    clienteObs: document.getElementById("valoresClienteObs")?.textContent || "",
+    itens
+  };
+}
+
+function salvarEstadoCalculadoraValores() {
+  try {
+    localStorage.setItem(MAPTORK_VALORES_ESTADO, JSON.stringify(capturarEstadoCalculadoraValores()));
+  } catch (erro) {
+    console.warn("Não foi possível guardar a calculadora:", erro);
+  }
+}
+
+function restaurarEstadoCalculadoraValores() {
+  let estado = null;
+  try {
+    const bruto = localStorage.getItem(MAPTORK_VALORES_ESTADO);
+    if (bruto) estado = JSON.parse(bruto);
+  } catch (erro) {
+    console.warn("Não foi possível restaurar a calculadora:", erro);
+  }
+  if (!estado || typeof estado !== "object") return false;
+
+  const campos = {
+    valoresLoja: estado.loja,
+    valoresVendedor: estado.vendedor,
+    valoresClienteNome: estado.clienteNome,
+    valoresClienteTelefone: estado.clienteTelefone,
+    valoresClienteObs: estado.clienteObs
+  };
+  Object.entries(campos).forEach(([id, valor]) => {
+    const campo = document.getElementById(id);
+    if (campo) campo.textContent = String(valor || "");
+  });
+
+  const lista = document.getElementById("valoresItens");
+  if (lista && Array.isArray(estado.itens)) {
+    lista.innerHTML = "";
+    const itens = estado.itens.length ? estado.itens : [{}, {}, {}];
+    itens.forEach((item) => adicionarItemValor(item?.descricao || "", item?.valor || "", false));
+  }
+
+  autoAjustarObservacao(document.getElementById("valoresClienteObs"));
+  atualizarTotalValores();
+  return true;
+}
+
 function abrirCalculadoraValores() {
   const calc = document.getElementById("calculadoraValores");
   const grid = document.getElementById("esquemasGrid");
@@ -3984,6 +4635,7 @@ function abrirCalculadoraValores() {
 
   if (calc) calc.style.display = "block";
   prepararEditoresCalculadoraValores();
+  restaurarEstadoCalculadoraValores();
   if (grid) grid.style.display = "none";
   if (aviso) aviso.style.display = "none";
   if (pastilhaLauncher) pastilhaLauncher.style.display = "none";
@@ -4002,6 +4654,7 @@ function abrirCalculadoraValores() {
 }
 
 function fecharCalculadoraValores() {
+  salvarEstadoCalculadoraValores();
   const calc = document.getElementById("calculadoraValores");
   const grid = document.getElementById("esquemasGrid");
   const aviso = document.querySelector("#esquemas .esquema-aviso");
@@ -4015,7 +4668,7 @@ function fecharCalculadoraValores() {
   if (valoresLauncher) valoresLauncher.style.display = "block";
 }
 
-function adicionarItemValor(descricao = "", valor = "") {
+function adicionarItemValor(descricao = "", valor = "", persistir = true) {
   const lista = document.getElementById("valoresItens");
   if (!lista) return;
 
@@ -4037,10 +4690,12 @@ function adicionarItemValor(descricao = "", valor = "") {
   remover.addEventListener("click", () => {
     linha.remove();
     atualizarTotalValores();
+    salvarEstadoCalculadoraValores();
   });
 
   lista.appendChild(linha);
   atualizarTotalValores();
+  if (persistir) salvarEstadoCalculadoraValores();
 }
 
 function prepararEditoresCalculadoraValores() {
@@ -4063,6 +4718,14 @@ function prepararEditoresCalculadoraValores() {
     event.preventDefault();
     const texto = (event.clipboardData || window.clipboardData)?.getData("text/plain") || "";
     document.execCommand("insertText", false, texto);
+  });
+
+  calc.addEventListener("input", (event) => {
+    const campo = event.target.closest?.(".valores-editor");
+    if (!campo) return;
+    if (campo.classList.contains("valor-item-valor")) atualizarTotalValores();
+    if (campo.id === "valoresClienteObs") autoAjustarObservacao(campo);
+    salvarEstadoCalculadoraValores();
   });
 }
 
@@ -4106,10 +4769,11 @@ function limparCalculadoraValores() {
   const lista = document.getElementById("valoresItens");
   if (!lista) return;
   lista.innerHTML = "";
-  adicionarItemValor();
-  adicionarItemValor();
-  adicionarItemValor();
+  adicionarItemValor("", "", false);
+  adicionarItemValor("", "", false);
+  adicionarItemValor("", "", false);
   atualizarTotalValores();
+  salvarEstadoCalculadoraValores();
 }
 
 function escaparHtmlValor(texto) {
@@ -4145,23 +4809,42 @@ function coletarDadosCalculadoraValores() {
 }
 
 function abrirPaginaValores(nomeArquivo, mensagemVazia) {
+  salvarEstadoCalculadoraValores();
   const dados = coletarDadosCalculadoraValores();
   if (!dados.itens.length) {
     alert(mensagemVazia);
     return;
   }
 
-  // Os dados seguem no hash da URL. Assim a nova página funciona mesmo
-  // sem depender de localStorage e sem trocar a tela principal do site.
+  // Abre diretamente durante o clique do usuário. Isso é mais compatível
+  // com Chrome/Android WebView do que disparar um clique artificial em link.
   const destino = nomeArquivo + "#" + encodeURIComponent(JSON.stringify(dados));
-  const link = document.createElement("a");
-  link.href = destino;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+
+  // No aplicativo Android, usa a ponte nativa para abrir a página em uma
+  // janela interna. Isso evita bloqueio de pop-up/target=_blank do WebView.
+  try {
+    if (window.AndroidApp && typeof window.AndroidApp.openInternalPage === "function") {
+      window.AndroidApp.openInternalPage(destino);
+      return;
+    }
+  } catch (erro) {
+    console.warn("Abertura nativa indisponível:", erro);
+  }
+
+  try {
+    const novaAba = window.open(destino, "_blank");
+    if (novaAba) {
+      try { novaAba.focus(); } catch (e) {}
+      return;
+    }
+  } catch (erro) {
+    console.warn("Não foi possível abrir uma nova aba:", erro);
+  }
+
+  // Fallback: se o navegador bloquear pop-up, abre na mesma tela.
+  // Marca o retorno para reabrir automaticamente a calculadora com os dados salvos.
+  try { sessionStorage.setItem(MAPTORK_VALORES_REABRIR, "1"); } catch (e) {}
+  window.location.href = destino;
 }
 
 function salvarCalculadoraValoresImagem() {
@@ -4180,8 +4863,33 @@ function imprimirCalculadoraValores() {
 
 
 
+function reabrirCalculadoraValoresSeNecessario() {
+  let reabrir = false;
+  try {
+    reabrir = sessionStorage.getItem(MAPTORK_VALORES_REABRIR) === "1";
+    if (reabrir) sessionStorage.removeItem(MAPTORK_VALORES_REABRIR);
+  } catch (e) {}
+
+  if (!reabrir) return;
+
+  restaurarEstadoCalculadoraValores();
+  const botaoEsquemas = document.querySelector('.nav button[onclick*="esquemas"]');
+  showPage("esquemas", botaoEsquemas || null);
+  abrirCalculadoraValores();
+}
+
 // Mantém campos de senha desativados fora das páginas Conta/Admin.
 document.addEventListener("DOMContentLoaded", function () {
   const paginaVisivel = document.querySelector('.page:not([style*="display:none"])');
   configurarCamposCredenciaisPorPagina(paginaVisivel ? paginaVisivel.id : "inicio");
+
+  // Restaura os valores se a página tiver sido realmente recarregada.
+  restaurarEstadoCalculadoraValores();
+  reabrirCalculadoraValoresSeNecessario();
+});
+
+// Também trata o botão Voltar quando o navegador recupera a página pelo
+// cache de navegação (bfcache), situação em que DOMContentLoaded não roda de novo.
+window.addEventListener("pageshow", function () {
+  reabrirCalculadoraValoresSeNecessario();
 });

@@ -1,4 +1,4 @@
-const API = "https://script.google.com/macros/s/AKfycbzScIhxB1v7f5DVtT0-p38tX2ppKj1H1kckl04aZOU3qHkcma_w10oZ-wZ5I32QTcnK/exec";
+const API = "https://script.google.com/macros/s/AKfycbzRX5WWEj0_cD3ERlixKXqB_feiUKzqnExED5KiKYH7VOTvt_tjoqEuTC60iq5cp3Ra/exec";
 
 function mostrarMensagem(texto, tipo) {
   const msg = document.getElementById("mensagem");

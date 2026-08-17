@@ -11,16 +11,36 @@
 </style>
 </head>
 <body>
-<div class="toolbar"><button onclick="window.close()">Voltar</button><button class="primary" onclick="window.print()">Imprimir / Salvar PDF</button></div>
+<div class="toolbar"><button onclick="voltarPagina()">Voltar</button><button class="primary" onclick="imprimirOuSalvarPdf()">Imprimir / Salvar PDF</button></div>
 <main id="paper" class="paper"></main>
 <script>
 function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
 function esc(t){return String(t||'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}
+function imprimirOuSalvarPdf(){
+ try{
+  if(window.AndroidApp && typeof window.AndroidApp.printPage==='function'){
+   window.AndroidApp.printPage();
+   return;
+  }
+ }catch(e){console.warn('Impressão Android indisponível:',e)}
+ window.print();
+}
+function voltarPagina(){
+ try{
+  if(window.AndroidApp && typeof window.AndroidApp.closeInternalPage==='function'){
+   window.AndroidApp.closeInternalPage();
+   return;
+  }
+ }catch(e){console.warn('Fechamento Android indisponível:',e)}
+ try{ if(window.opener){ window.close(); return; } }catch(e){}
+ try{ sessionStorage.setItem('maptork_calculadora_valores_reabrir','1'); }catch(e){}
+ if(history.length>1){ history.back(); } else { location.href='index.html'; }
+}
 try{
  const raw=location.hash.slice(1); const d=JSON.parse(decodeURIComponent(raw));
  const rows=(d.itens||[]).map((it,i)=>`<tr><td class="num">${i+1}</td><td>${esc(it.descricao)}</td><td class="money">${moeda(it.valor)}</td></tr>`).join('');
  const meta=(d.vendedor||d.clienteNome||d.clienteTelefone||d.clienteObs)?`<div class="meta">${d.vendedor?`<div><b>Vendedor:</b> ${esc(d.vendedor)}</div>`:''}${d.clienteNome?`<div><b>Cliente:</b> ${esc(d.clienteNome)}</div>`:''}${d.clienteTelefone?`<div><b>Telefone:</b> ${esc(d.clienteTelefone)}</div>`:''}${d.clienteObs?`<div class="wide"><b>Observação:</b> ${esc(d.clienteObs)}</div>`:''}</div>`:''; document.getElementById('paper').innerHTML=`<div class="top"><div><div class="brand">${esc(d.loja||'Orçamento')}</div><div class="sub">Orçamento / Serviços</div></div><div class="date">Data: ${esc(d.data||'')}</div></div>${meta}<table><thead><tr><th>#</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rows}</tbody></table><div class="total"><span>TOTAL</span><strong>${moeda(d.total)}</strong></div><div class="footer">Documento gerado pela ferramenta MAPTORK</div><div class="footer-brand"><strong>MAPTORK</strong> · Calculadora de Valores</div>`;
- setTimeout(()=>window.print(),500);
+ setTimeout(()=>imprimirOuSalvarPdf(),650);
 }catch(e){document.getElementById('paper').innerHTML='<div class="erro">Não foi possível carregar os valores. Volte e tente novamente.</div>'}
 </script>
 </body></html>
