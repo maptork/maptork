@@ -995,3 +995,33 @@ body,
   .ferramentas-dinamicas-topo{align-items:flex-start;flex-direction:column;gap:8px}
   .ferramentas-dinamicas-topo h2{font-size:19px}
 }
+
+
+/* MAPTORK - CALCULADORAS NO GRID PADRÃO DE FERRAMENTAS */
+#esquemasGrid > .valores-launcher,
+#esquemasGrid > .pastilha-launcher{
+  margin:0;
+  min-width:0;
+  width:auto;
+  max-width:none;
+}
+#esquemasGrid > .valores-launcher .esquema-card,
+#esquemasGrid > .pastilha-launcher .esquema-card{
+  height:100%;
+  min-height:230px;
+  width:100%;
+}
+#esquemasGrid > .valores-launcher .esquema-card h3,
+#esquemasGrid > .pastilha-launcher .esquema-card h3{
+  font-size:17px;
+}
+#esquemasGrid > .valores-launcher .esquema-card p,
+#esquemasGrid > .pastilha-launcher .esquema-card p{
+  line-height:1.55;
+}
+@media(max-width:520px){
+  #esquemasGrid > .valores-launcher .esquema-card,
+  #esquemasGrid > .pastilha-launcher .esquema-card{
+    min-height:220px;
+  }
+}

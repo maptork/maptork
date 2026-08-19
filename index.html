@@ -1247,22 +1247,6 @@ manuais será liberado.
 
 
   <!-- CALCULADORA DE VALORES -->
-  <div class="valores-launcher">
-    <div class="card esquema-card valores-card">
-      <div class="esquema-icone valores-card-icone">R$</div>
-      <h3>Calculadora de Valores</h3>
-      <p class="muted">Adicione descrições e valores, calcule o total e gere uma versão para imprimir ou salvar em PDF.</p>
-      <button
-        class="cta esquema-btn valores-open-btn"
-        type="button"
-        onclick="abrirCalculadoraValores()"
-        aria-controls="calculadoraValores"
-      >
-        ABRIR CALCULADORA
-      </button>
-    </div>
-  </div>
-
   <div id="calculadoraValores" class="valores-calculadora" style="display:none">
     <div class="valores-calculadora-topo">
       <div>
@@ -1333,22 +1317,6 @@ manuais será liberado.
 
 
   <!-- CALCULADORA DE PASTILHA DE VÁLVULA -->
-  <div class="pastilha-launcher">
-    <div class="card esquema-card pastilha-card">
-      <div class="esquema-icone pastilha-card-icone">🔧</div>
-      <h3>Calculadora de Pastilha</h3>
-      <p class="muted">Calcule a nova pastilha pela folga medida, pastilha atual e valor do manual.</p>
-      <button
-        class="cta esquema-btn pastilha-open-btn"
-        type="button"
-        onclick="abrirCalculadoraPastilha()"
-        aria-controls="calculadoraPastilha"
-      >
-        ABRIR CALCULADORA
-      </button>
-    </div>
-  </div>
-
   <div id="calculadoraPastilha" class="pastilha-calculadora" style="display:none">
     <div class="pastilha-calculadora-topo">
       <div>
@@ -1399,6 +1367,40 @@ manuais será liberado.
 
   <!-- GRID -->
   <div class="grid" id="esquemasGrid">
+
+    <!-- CALCULADORAS NO MESMO GRID DAS OUTRAS FERRAMENTAS -->
+    <div class="valores-launcher">
+        <div class="card esquema-card valores-card">
+          <div class="esquema-icone valores-card-icone">R$</div>
+          <h3>Calculadora de Valores</h3>
+          <p class="muted">Adicione descrições e valores, calcule o total e gere uma versão para imprimir ou salvar em PDF.</p>
+          <button
+            class="cta esquema-btn valores-open-btn"
+            type="button"
+            onclick="abrirCalculadoraValores()"
+            aria-controls="calculadoraValores"
+          >
+            ABRIR CALCULADORA
+          </button>
+        </div>
+      </div>
+
+    <div class="pastilha-launcher">
+        <div class="card esquema-card pastilha-card">
+          <div class="esquema-icone pastilha-card-icone">🔧</div>
+          <h3>Calculadora de Pastilha</h3>
+          <p class="muted">Calcule a nova pastilha pela folga medida, pastilha atual e valor do manual.</p>
+          <button
+            class="cta esquema-btn pastilha-open-btn"
+            type="button"
+            onclick="abrirCalculadoraPastilha()"
+            aria-controls="calculadoraPastilha"
+          >
+            ABRIR CALCULADORA
+          </button>
+        </div>
+      </div>
+
 
 
     <!-- ============================================== -->
