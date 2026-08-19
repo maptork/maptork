@@ -1235,10 +1235,20 @@ manuais será liberado.
   ></div>
 
 
+  <!-- FERRAMENTAS ADICIONADAS PELO ADMIN - PRIMEIRO -->
+  <div id="ferramentasDinamicasBloco" class="ferramentas-dinamicas-bloco" style="display:none">
+    <div class="ferramentas-dinamicas-topo">
+      <h2>Novas ferramentas</h2>
+      <span>Exclusivo para assinantes</span>
+    </div>
+    <div class="grid" id="ferramentasDinamicasGrid"></div>
+  </div>
+
+
+
   <!-- CALCULADORA DE VALORES -->
   <div class="valores-launcher">
     <div class="card esquema-card valores-card">
-      <div class="ferramenta-selo-gratis">Acesso grátis</div>
       <div class="esquema-icone valores-card-icone">R$</div>
       <h3>Calculadora de Valores</h3>
       <p class="muted">Adicione descrições e valores, calcule o total e gere uma versão para imprimir ou salvar em PDF.</p>
@@ -1325,7 +1335,6 @@ manuais será liberado.
   <!-- CALCULADORA DE PASTILHA DE VÁLVULA -->
   <div class="pastilha-launcher">
     <div class="card esquema-card pastilha-card">
-      <div class="ferramenta-selo-gratis">Acesso grátis</div>
       <div class="esquema-icone pastilha-card-icone">🔧</div>
       <h3>Calculadora de Pastilha</h3>
       <p class="muted">Calcule a nova pastilha pela folga medida, pastilha atual e valor do manual.</p>
@@ -1350,10 +1359,6 @@ manuais será liberado.
     </div>
 
     <div class="pastilha-formula">Folga medida + pastilha atual − folga do manual = nova pastilha</div>
-
-    <figure class="pastilha-referencia">
-      <img src="img/dominar-400-cabecote.jpg" alt="Referência do cabeçote da Dominar 400 com posições e folgas de admissão e escape">
-    </figure>
 
     <div class="pastilha-grid-calc">
       <div class="pastilha-linha" data-pastilha="adm1">
@@ -1391,8 +1396,6 @@ manuais será liberado.
       <button class="pastilha-voltar" type="button" onclick="fecharCalculadoraPastilha()">Voltar</button>
     </div>
   </div>
-
-
 
   <!-- GRID -->
   <div class="grid" id="esquemasGrid">
@@ -1532,6 +1535,7 @@ manuais será liberado.
     </div>
 
 
+    <!-- Ferramentas adicionadas pelo administrador entram aqui automaticamente -->
   </div>
 
 
@@ -1600,10 +1604,19 @@ Entre em contato pelo WhatsApp para atendimento.
   class="cta"
   type="button"
   onclick="
-    window.open(
-      'https://wa.me/5561995906710',
-      '_blank'
-    )
+    (function () {
+      const url = 'https://wa.me/5561995906710';
+
+      if (
+        window.AndroidApp &&
+        typeof window.AndroidApp.openExternal === 'function'
+      ) {
+        window.AndroidApp.openExternal(url);
+        return;
+      }
+
+      window.location.href = url;
+    })();
   "
 >
 
@@ -2109,6 +2122,102 @@ Escolha uma imagem e toque em salvar.
 
 </div>
 
+
+
+<!-- ================================================== -->
+<!-- NOVAS FERRAMENTAS -->
+<!-- ================================================== -->
+
+<div class="card form-card admin-tools-card">
+
+  <h3>Novas Ferramentas</h3>
+
+  <p class="admin-tools-intro">
+    Cadastre uma ferramenta para aparecer para todos. O acesso ao link fica liberado somente para assinantes ativos.
+  </p>
+
+  <input type="hidden" id="adminFerramentaId" value="">
+
+  <div class="field">
+    <label for="adminFerramentaTitulo">Nome da ferramenta</label>
+    <input
+      type="text"
+      id="adminFerramentaTitulo"
+      maxlength="80"
+      autocomplete="off"
+      placeholder="Ex.: Tabela de códigos de falha"
+    >
+  </div>
+
+  <div class="field">
+    <label for="adminFerramentaTexto">Texto / descrição</label>
+    <textarea
+      id="adminFerramentaTexto"
+      maxlength="500"
+      rows="4"
+      placeholder="Explique para que serve esta ferramenta."
+    ></textarea>
+  </div>
+
+  <div class="field">
+    <label for="adminFerramentaLink">Link</label>
+    <input
+      type="url"
+      id="adminFerramentaLink"
+      inputmode="url"
+      autocomplete="off"
+      placeholder="https://..."
+    >
+  </div>
+
+  <div class="field admin-tool-image-select-field">
+    <label class="admin-field-label">Imagem</label>
+    <input
+      type="file"
+      id="adminFerramentaImagemFile"
+      accept="image/jpeg,image/png,image/webp"
+      onchange="aoSelecionarImagemFerramentaAdmin()"
+    >
+    <label for="adminFerramentaImagemFile" class="admin-file-picker-btn">
+      SELECIONAR IMAGEM
+    </label>
+    <div id="adminFerramentaImagemNome" class="admin-file-name">Nenhuma imagem selecionada</div>
+    <small class="admin-image-help">JPG, PNG ou WEBP. A imagem é reduzida automaticamente.</small>
+  </div>
+
+  <div class="admin-tool-image-preview" id="adminFerramentaPreviewBox" style="display:none">
+    <img id="adminFerramentaImagemPreview" alt="Pré-visualização da ferramenta">
+  </div>
+
+  <div class="admin-tool-actions">
+    <button
+      class="cta admin-tool-save-btn"
+      id="adminSalvarFerramentaBtn"
+      type="button"
+      onclick="salvarFerramentaAdmin()"
+    >
+      SALVAR FERRAMENTA
+    </button>
+
+    <button
+      class="cta admin-secondary"
+      type="button"
+      onclick="limparFormularioFerramentaAdmin()"
+    >
+      LIMPAR
+    </button>
+  </div>
+
+  <div id="adminFerramentaMensagem" class="diagnostic-result"></div>
+
+  <div class="admin-tools-list-header">
+    <strong>Ferramentas adicionadas</strong>
+    <button type="button" class="admin-tools-refresh" onclick="carregarFerramentasAdmin()">ATUALIZAR</button>
+  </div>
+
+  <div id="adminFerramentasLista" class="admin-tools-list"></div>
+
+</div>
 
 
 <!-- ================================================== -->

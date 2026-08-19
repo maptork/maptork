@@ -939,3 +939,59 @@ body,
   .admin-image-actions{gap:8px}
   .admin-image-actions button{min-height:44px;font-size:10px;padding:0 8px}
 }
+
+
+/* =====================================================
+   MAPTORK - FERRAMENTAS DINÂMICAS / ADMIN
+   ===================================================== */
+.ferramenta-dinamica-card{position:relative;overflow:hidden;display:flex;flex-direction:column}
+.ferramenta-dinamica-media{width:100%;height:150px;margin:0 0 14px;border-radius:13px;background:#0e1217;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.ferramenta-dinamica-media img{width:100%;height:100%;object-fit:contain;display:block;padding:8px}
+.ferramenta-dinamica-placeholder{font-size:48px;opacity:.9}
+.ferramenta-dinamica-card .muted{flex:1}
+.ferramenta-selo-assinante{position:absolute;top:14px;right:14px;z-index:3;min-height:26px;padding:0 9px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,43,50,.13);border:1px solid rgba(255,43,50,.32);color:#ff777b;font-size:9px;font-weight:900;letter-spacing:.3px;text-transform:uppercase}
+
+.admin-tools-card{margin-top:16px}
+.admin-tools-intro{font-size:12px;line-height:1.45;color:#c4cad2;margin:6px 0 12px}
+.admin-tools-card textarea{width:100%;min-height:96px;resize:vertical;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0d0f13;color:#e9edf2;font:inherit;outline:none}
+.admin-tools-card textarea:focus{border-color:#d6252c;box-shadow:0 0 0 2px rgba(214,37,44,.12)}
+.admin-tool-image-select-field input[type=file]{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important}
+.admin-tool-image-preview{margin:12px 0 14px;min-height:170px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#11151b;align-items:center;justify-content:center;overflow:hidden}
+.admin-tool-image-preview img{display:block;width:100%;max-width:300px;height:190px;object-fit:contain}
+.admin-tool-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.admin-tool-actions .cta{width:100%;min-height:46px;margin:0}
+.admin-tool-save-btn{background:linear-gradient(180deg,#ff3038 0%,#c9161d 100%)!important;border:1px solid #ff4a51!important;color:#fff!important;box-shadow:0 8px 18px rgba(212,20,28,.2)!important}
+.admin-tools-list-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.admin-tools-refresh{border:1px solid #3a414c;background:#20252d;color:#e8ebef;border-radius:9px;padding:8px 10px;font-size:9px;font-weight:900}
+.admin-tools-list{display:grid;gap:10px;margin-top:12px}
+.admin-tool-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px;border-radius:12px;border:1px solid var(--line);background:#11151b}
+.admin-tool-item-info{min-width:0}
+.admin-tool-item h4{margin:0 0 5px;font-size:14px;color:#f0f3f6}
+.admin-tool-item p{margin:0 0 5px;font-size:11px;line-height:1.35;color:#aeb6c1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.admin-tool-item small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#747e8a;font-size:9px}
+.admin-tool-item-actions{display:flex;gap:6px;flex-direction:column}
+.admin-tool-item-actions button{min-width:72px;border-radius:8px;padding:8px 9px;font-size:9px;font-weight:900;border:1px solid #3a414c}
+.admin-tool-edit{background:#242a33;color:#fff}
+.admin-tool-delete{background:rgba(213,23,31,.12);border-color:rgba(255,50,58,.35)!important;color:#ff7277}
+.admin-tool-empty{padding:14px;border:1px dashed #343b45;border-radius:11px;color:#8c95a1;font-size:11px;text-align:center}
+
+@media(max-width:600px){
+  .ferramenta-dinamica-media{height:135px}
+  .admin-tool-actions{gap:8px}
+  .admin-tool-item{grid-template-columns:1fr}
+  .admin-tool-item-actions{flex-direction:row}
+  .admin-tool-item-actions button{flex:1}
+}
+
+/* =========================================================
+   FERRAMENTAS DINÂMICAS - ÁREA VISÍVEL APÓS AS CALCULADORAS
+   ========================================================= */
+.ferramentas-dinamicas-bloco{margin:24px 0 26px}
+.ferramentas-dinamicas-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:0 3px}
+.ferramentas-dinamicas-topo h2{margin:0;color:#f5f7fb;font-size:20px;font-weight:900;letter-spacing:-.2px}
+.ferramentas-dinamicas-topo span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:rgba(255,43,50,.10);border:1px solid rgba(255,43,50,.28);color:#ff777b;font-size:9px;font-weight:900;text-transform:uppercase;white-space:nowrap}
+#ferramentasDinamicasGrid{margin-top:0}
+@media (max-width:520px){
+  .ferramentas-dinamicas-topo{align-items:flex-start;flex-direction:column;gap:8px}
+  .ferramentas-dinamicas-topo h2{font-size:19px}
+}

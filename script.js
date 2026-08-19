@@ -89,6 +89,17 @@ function showPage(id, btn) {
     pagina.style.display = "block";
   }
 
+  if (id === "esquemas") {
+    // As ferramentas são pré-carregadas ao abrir o MAPTORK.
+    // Ao voltar para esta página, apenas renderiza o cache da sessão.
+    if (typeof renderizarFerramentasDinamicas === "function") {
+      renderizarFerramentasDinamicas();
+    }
+    if (typeof preCarregarFerramentasDinamicas === "function") {
+      preCarregarFerramentasDinamicas(false);
+    }
+  }
+
   configurarCamposCredenciaisPorPagina(id);
 
 
@@ -1615,6 +1626,527 @@ async function excluirMinhaConta() {
 }
 
 
+
+// ======================================================
+// FERRAMENTAS DINÂMICAS - ADMIN + ASSINANTES
+// ======================================================
+
+let ferramentasDinamicasCache = [];
+let ferramentasImagensCache = Object.create(null);
+let ferramentasDinamicasCarregando = null;
+let ferramentasDinamicasCarregadasNestaSessao = false;
+let ferramentasAdminCache = [];
+let adminFerramentaImagemSelecionada = null;
+
+function escaparHtmlFerramenta(texto) {
+  return String(texto || "").replace(/[&<>\"']/g, function(c) {
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c];
+  });
+}
+
+function mostrarMensagemFerramentaAdmin(texto, sucesso) {
+  const box = document.getElementById("adminFerramentaMensagem");
+  if (!box) return;
+  box.textContent = texto || "";
+  box.className = "diagnostic-result" + (texto ? (sucesso ? " success-box" : " error-box") : "");
+  box.style.display = texto ? "block" : "none";
+}
+
+function atualizarNomeImagemFerramentaAdmin(texto) {
+  const box = document.getElementById("adminFerramentaImagemNome");
+  if (box) box.textContent = texto || "Nenhuma imagem selecionada";
+}
+
+async function prepararImagemFerramentaAdmin(arquivo) {
+  if (!arquivo) throw new Error("Escolha uma imagem.");
+  if (!String(arquivo.type || "").toLowerCase().startsWith("image/")) {
+    throw new Error("Selecione uma imagem JPG, PNG ou WEBP.");
+  }
+  if (arquivo.size > 12 * 1024 * 1024) {
+    throw new Error("A imagem original deve ter no máximo 12 MB.");
+  }
+
+  const original = await lerArquivoComoDataUrl(arquivo);
+  const imagem = await carregarImagemDataUrl(original);
+  let largura = imagem.naturalWidth || imagem.width || 1;
+  let altura = imagem.naturalHeight || imagem.height || 1;
+  const maxLado = 1000;
+  const escala = Math.min(1, maxLado / largura, maxLado / altura);
+  largura = Math.max(1, Math.round(largura * escala));
+  altura = Math.max(1, Math.round(altura * escala));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = largura;
+  canvas.height = altura;
+  const ctx = canvas.getContext("2d", { alpha: true });
+  if (!ctx) throw new Error("Não foi possível preparar a imagem.");
+  ctx.clearRect(0, 0, largura, altura);
+  ctx.drawImage(imagem, 0, 0, largura, altura);
+
+  let mimeType = String(arquivo.type || "").toLowerCase() === "image/png" ? "image/png" : "image/jpeg";
+  let qualidade = mimeType === "image/png" ? undefined : 0.9;
+  let dataUrl = canvas.toDataURL(mimeType, qualidade);
+  let base64 = extrairBase64DeDataUrl(dataUrl);
+
+  if (mimeType === "image/jpeg") {
+    while (tamanhoBase64EmBytes(base64) > 1400 * 1024 && qualidade > 0.55) {
+      qualidade = Number((qualidade - 0.08).toFixed(2));
+      dataUrl = canvas.toDataURL("image/jpeg", qualidade);
+      base64 = extrairBase64DeDataUrl(dataUrl);
+    }
+  } else if (tamanhoBase64EmBytes(base64) > 1800 * 1024) {
+    const webp = canvas.toDataURL("image/webp", 0.86);
+    if (webp.indexOf("data:image/webp") === 0) {
+      dataUrl = webp;
+      base64 = extrairBase64DeDataUrl(webp);
+      mimeType = "image/webp";
+    }
+  }
+
+  if (tamanhoBase64EmBytes(base64) > 2500 * 1024) {
+    throw new Error("A imagem ficou muito grande. Escolha outra imagem.");
+  }
+
+  return {
+    fileName: gerarNomeImagemUploadAdmin(arquivo.name || "ferramenta", mimeType),
+    mimeType: mimeType,
+    base64: base64,
+    dataUrl: dataUrl
+  };
+}
+
+async function aoSelecionarImagemFerramentaAdmin() {
+  const input = document.getElementById("adminFerramentaImagemFile");
+  const preview = document.getElementById("adminFerramentaImagemPreview");
+  const previewBox = document.getElementById("adminFerramentaPreviewBox");
+
+  if (!input || !input.files || !input.files[0]) {
+    adminFerramentaImagemSelecionada = null;
+    atualizarNomeImagemFerramentaAdmin("Nenhuma imagem selecionada");
+    return;
+  }
+
+  try {
+    atualizarNomeImagemFerramentaAdmin(input.files[0].name || "Imagem selecionada");
+    mostrarMensagemFerramentaAdmin("Preparando imagem...", true);
+    adminFerramentaImagemSelecionada = await prepararImagemFerramentaAdmin(input.files[0]);
+    if (preview) preview.src = adminFerramentaImagemSelecionada.dataUrl;
+    if (previewBox) previewBox.style.display = "flex";
+    mostrarMensagemFerramentaAdmin("Imagem pronta.", true);
+  } catch (erro) {
+    adminFerramentaImagemSelecionada = null;
+    input.value = "";
+    atualizarNomeImagemFerramentaAdmin("Nenhuma imagem selecionada");
+    mostrarMensagemFerramentaAdmin((erro && erro.message) || "Erro ao preparar imagem.", false);
+  }
+}
+
+function limparFormularioFerramentaAdmin() {
+  const ids = ["adminFerramentaId", "adminFerramentaTitulo", "adminFerramentaTexto", "adminFerramentaLink"];
+  ids.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const input = document.getElementById("adminFerramentaImagemFile");
+  if (input) input.value = "";
+  adminFerramentaImagemSelecionada = null;
+  atualizarNomeImagemFerramentaAdmin("Nenhuma imagem selecionada");
+  const preview = document.getElementById("adminFerramentaImagemPreview");
+  const previewBox = document.getElementById("adminFerramentaPreviewBox");
+  if (preview) preview.removeAttribute("src");
+  if (previewBox) previewBox.style.display = "none";
+  const btn = document.getElementById("adminSalvarFerramentaBtn");
+  if (btn) btn.textContent = "SALVAR FERRAMENTA";
+  mostrarMensagemFerramentaAdmin("", true);
+}
+
+async function obterImagemFerramentaCache(idFerramenta, forcarAtualizacao) {
+  const id = String(idFerramenta || "").trim();
+  if (!id) return "";
+
+  if (!forcarAtualizacao && ferramentasImagensCache[id]) {
+    return ferramentasImagensCache[id];
+  }
+
+  try {
+    const resposta = await fetch(
+      AUTH_API + "?action=obterImagemFerramenta&id=" + encodeURIComponent(id) + "&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    const dados = await resposta.json();
+    if (dados && dados.ok === true && dados.dataUrl) {
+      ferramentasImagensCache[id] = dados.dataUrl;
+      return dados.dataUrl;
+    }
+  } catch (erro) {
+    console.warn("Imagem da ferramenta indisponível:", erro);
+  }
+
+  return ferramentasImagensCache[id] || "";
+}
+
+async function carregarImagemFerramentaEmElemento(idFerramenta, img, forcarAtualizacao) {
+  if (!idFerramenta || !img) return;
+
+  const id = String(idFerramenta);
+  const jaCarregada = ferramentasImagensCache[id];
+  if (jaCarregada && !forcarAtualizacao) {
+    img.src = jaCarregada;
+    img.style.display = "block";
+    return;
+  }
+
+  const dataUrl = await obterImagemFerramentaCache(id, !!forcarAtualizacao);
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.style.display = "block";
+  }
+}
+
+function renderizarFerramentasDinamicas() {
+  const grid = document.getElementById("ferramentasDinamicasGrid") || document.getElementById("esquemasGrid");
+  const bloco = document.getElementById("ferramentasDinamicasBloco");
+  if (!grid) return;
+
+  grid.querySelectorAll(".ferramenta-dinamica-card").forEach(function(el) { el.remove(); });
+
+  const lista = Array.isArray(ferramentasDinamicasCache) ? ferramentasDinamicasCache : [];
+  if (bloco) bloco.style.display = lista.length ? "block" : "none";
+
+  lista.forEach(function(item) {
+    const card = document.createElement("div");
+    card.className = "card esquema-card ferramenta-dinamica-card";
+
+    const media = document.createElement("div");
+    media.className = "ferramenta-dinamica-media";
+
+    if (item.temImagem) {
+      const img = document.createElement("img");
+      img.alt = String(item.titulo || "Ferramenta MAPTORK");
+      const cacheImagem = ferramentasImagensCache[String(item.id)] || "";
+      if (cacheImagem) {
+        img.src = cacheImagem;
+        img.style.display = "block";
+      } else {
+        img.style.display = "none";
+      }
+      media.appendChild(img);
+
+      // Se o usuário abrir Ferramentas antes de terminar o pré-carregamento,
+      // completa apenas a imagem que ainda estiver faltando.
+      if (!cacheImagem) {
+        carregarImagemFerramentaEmElemento(item.id, img, false);
+      }
+    } else {
+      media.innerHTML = '<span class="ferramenta-dinamica-placeholder">🔧</span>';
+    }
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = String(item.titulo || "Ferramenta");
+
+    const texto = document.createElement("p");
+    texto.className = "muted";
+    texto.textContent = String(item.texto || "");
+
+    const selo = document.createElement("div");
+    selo.className = "ferramenta-selo-assinante";
+    selo.textContent = "Assinantes";
+
+    const botao = document.createElement("button");
+    botao.className = "cta esquema-btn";
+    botao.type = "button";
+    botao.textContent = "ACESSAR FERRAMENTA";
+    botao.onclick = function() { abrirFerramentaDinamica(item.id, item.titulo); };
+
+    card.appendChild(selo);
+    card.appendChild(media);
+    card.appendChild(titulo);
+    card.appendChild(texto);
+    card.appendChild(botao);
+    grid.appendChild(card);
+  });
+}
+
+async function preCarregarFerramentasDinamicas(forcarAtualizacao) {
+  const forcar = !!forcarAtualizacao;
+
+  if (!forcar && ferramentasDinamicasCarregadasNestaSessao) {
+    renderizarFerramentasDinamicas();
+    return ferramentasDinamicasCache;
+  }
+
+  if (!forcar && ferramentasDinamicasCarregando) {
+    return ferramentasDinamicasCarregando;
+  }
+
+  ferramentasDinamicasCarregando = (async function() {
+    try {
+      const resposta = await fetch(
+        AUTH_API + "?action=obterFerramentasPublicas&_t=" + Date.now(),
+        { cache: "no-store" }
+      );
+      const dados = await resposta.json();
+      const lista = dados && dados.ok === true && Array.isArray(dados.ferramentas)
+        ? dados.ferramentas
+        : [];
+
+      ferramentasDinamicasCache = lista;
+      ferramentasDinamicasCarregadasNestaSessao = true;
+      renderizarFerramentasDinamicas();
+
+      // Carrega todas as imagens em paralelo logo na entrada do site/app.
+      // Depois a navegação entre páginas não precisa consultar o servidor novamente.
+      await Promise.all(
+        lista
+          .filter(function(item) { return item && item.temImagem && item.id; })
+          .map(function(item) {
+            return obterImagemFerramentaCache(item.id, forcar).catch(function() { return ""; });
+          })
+      );
+
+      renderizarFerramentasDinamicas();
+      return lista;
+    } catch (erro) {
+      console.warn("Não foi possível pré-carregar novas ferramentas:", erro);
+      // Mantém o que já estiver em memória, evitando tela vazia em falha temporária.
+      renderizarFerramentasDinamicas();
+      return ferramentasDinamicasCache;
+    } finally {
+      ferramentasDinamicasCarregando = null;
+    }
+  })();
+
+  return ferramentasDinamicasCarregando;
+}
+
+// Mantém compatibilidade com as chamadas existentes do Admin.
+async function carregarFerramentasDinamicas(forcarAtualizacao) {
+  renderizarFerramentasDinamicas();
+  return preCarregarFerramentasDinamicas(!!forcarAtualizacao);
+}
+
+function abrirLinkFerramenta(link) {
+  const url = String(link || "").trim();
+  if (!/^https?:\/\//i.test(url)) return;
+  try {
+    if (window.AndroidApp && typeof window.AndroidApp.openExternal === "function") {
+      window.AndroidApp.openExternal(url);
+      return;
+    }
+  } catch (erro) {}
+  const nova = window.open(url, "_blank", "noopener,noreferrer");
+  if (!nova) window.location.href = url;
+}
+
+async function abrirFerramentaDinamica(id, titulo) {
+  esconderMensagemEsquema();
+  mostrarMensagemEsquema("Verificando sua assinatura...");
+  const token = String(localStorage.getItem("token") || "").trim();
+  if (!token) {
+    mostrarMensagemEsquema("Entre na sua conta para acessar esta ferramenta.", true);
+    return;
+  }
+
+  try {
+    const form = new URLSearchParams();
+    form.set("action", "abrirFerramentaDinamica");
+    form.set("token", token);
+    form.set("id", String(id || ""));
+
+    const resposta = await fetch(
+      AUTH_API + "?action=abrirFerramentaDinamica&_t=" + Date.now(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: form.toString()
+      }
+    );
+    const dados = await resposta.json();
+
+    if (!dados || dados.ok !== true || !dados.link) {
+      mostrarMensagemEsquema((dados && dados.mensagem) || "Não foi possível abrir a ferramenta.", true);
+      if (dados && dados.codigo === "SEM_PLANO") {
+        setTimeout(function() {
+          const botaoAssinaturas = document.querySelector('.nav button[onclick*="assinaturas"]');
+          showPage("assinaturas", botaoAssinaturas || null);
+        }, 1500);
+      }
+      return;
+    }
+
+    mostrarMensagemEsquema("Plano ativo. Abrindo " + String(titulo || "ferramenta") + "...");
+    abrirLinkFerramenta(dados.link);
+    setTimeout(esconderMensagemEsquema, 1800);
+  } catch (erro) {
+    console.error("Erro ao abrir ferramenta dinâmica:", erro);
+    mostrarMensagemEsquema("Não foi possível verificar sua assinatura. Tente novamente.", true);
+  }
+}
+
+async function salvarFerramentaAdmin() {
+  const token = String(localStorage.getItem("token") || "").trim();
+  const id = String(document.getElementById("adminFerramentaId")?.value || "").trim();
+  const titulo = String(document.getElementById("adminFerramentaTitulo")?.value || "").trim();
+  const texto = String(document.getElementById("adminFerramentaTexto")?.value || "").trim();
+  const link = String(document.getElementById("adminFerramentaLink")?.value || "").trim();
+  const botao = document.getElementById("adminSalvarFerramentaBtn");
+
+  if (!token) return mostrarMensagemFerramentaAdmin("Sessão inválida. Entre novamente.", false);
+  if (!titulo || !texto || !link) return mostrarMensagemFerramentaAdmin("Preencha nome, texto e link.", false);
+  if (!/^https?:\/\//i.test(link)) return mostrarMensagemFerramentaAdmin("O link precisa começar com http:// ou https://.", false);
+  if (!id && !adminFerramentaImagemSelecionada) return mostrarMensagemFerramentaAdmin("Selecione uma imagem para a nova ferramenta.", false);
+
+  if (botao) { botao.disabled = true; botao.textContent = id ? "SALVANDO..." : "ADICIONANDO..."; }
+  mostrarMensagemFerramentaAdmin("Salvando ferramenta...", true);
+
+  try {
+    const form = new URLSearchParams();
+    form.set("action", "adminSalvarFerramenta");
+    form.set("token", token);
+    form.set("id", id);
+    form.set("titulo", titulo);
+    form.set("texto", texto);
+    form.set("link", link);
+    if (adminFerramentaImagemSelecionada) {
+      form.set("imageBase64", adminFerramentaImagemSelecionada.base64);
+      form.set("fileName", adminFerramentaImagemSelecionada.fileName);
+      form.set("mimeType", adminFerramentaImagemSelecionada.mimeType);
+    }
+
+    const resposta = await fetch(
+      AUTH_API + "?action=adminSalvarFerramenta&_t=" + Date.now(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: form.toString()
+      }
+    );
+    const dados = await resposta.json();
+    if (!dados || dados.ok !== true) {
+      mostrarMensagemFerramentaAdmin((dados && dados.mensagem) || "Não foi possível salvar a ferramenta.", false);
+      return;
+    }
+
+    limparFormularioFerramentaAdmin();
+    mostrarMensagemFerramentaAdmin(id ? "Ferramenta atualizada com sucesso." : "Ferramenta adicionada com sucesso.", true);
+    await carregarFerramentasAdmin();
+    await carregarFerramentasDinamicas(true);
+  } catch (erro) {
+    console.error("Erro salvar ferramenta:", erro);
+    mostrarMensagemFerramentaAdmin("Erro ao conectar com o Google Script.", false);
+  } finally {
+    if (botao) { botao.disabled = false; botao.textContent = "SALVAR FERRAMENTA"; }
+  }
+}
+
+async function carregarFerramentasAdmin() {
+  const box = document.getElementById("adminFerramentasLista");
+  if (!box) return;
+  const token = String(localStorage.getItem("token") || "").trim();
+  if (!token) { box.innerHTML = '<div class="admin-tool-empty">Sessão inválida.</div>'; return; }
+
+  box.innerHTML = '<div class="admin-tool-empty">Carregando...</div>';
+  try {
+    const resposta = await fetch(
+      AUTH_API + "?action=adminListarFerramentas&token=" + encodeURIComponent(token) + "&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    const dados = await resposta.json();
+    if (!dados || dados.ok !== true) {
+      box.innerHTML = '<div class="admin-tool-empty">' + escaparHtmlFerramenta((dados && dados.mensagem) || "Não foi possível carregar.") + '</div>';
+      return;
+    }
+    ferramentasAdminCache = Array.isArray(dados.ferramentas) ? dados.ferramentas : [];
+    if (!ferramentasAdminCache.length) {
+      box.innerHTML = '<div class="admin-tool-empty">Nenhuma ferramenta adicionada ainda.</div>';
+      return;
+    }
+
+    box.innerHTML = "";
+    ferramentasAdminCache.forEach(function(item) {
+      const card = document.createElement("div");
+      card.className = "admin-tool-item";
+      const info = document.createElement("div");
+      info.className = "admin-tool-item-info";
+      const h4 = document.createElement("h4");
+      h4.textContent = String(item.titulo || "Ferramenta");
+      const p = document.createElement("p");
+      p.textContent = String(item.texto || "");
+      const small = document.createElement("small");
+      small.textContent = String(item.link || "");
+      info.appendChild(h4); info.appendChild(p); info.appendChild(small);
+      const actions = document.createElement("div");
+      actions.className = "admin-tool-item-actions";
+      const editar = document.createElement("button");
+      editar.type = "button"; editar.className = "admin-tool-edit"; editar.textContent = "EDITAR";
+      editar.onclick = function() { editarFerramentaAdmin(item.id); };
+      const excluir = document.createElement("button");
+      excluir.type = "button"; excluir.className = "admin-tool-delete"; excluir.textContent = "EXCLUIR";
+      excluir.onclick = function() { excluirFerramentaAdmin(item.id, item.titulo); };
+      actions.appendChild(editar); actions.appendChild(excluir);
+      card.appendChild(info); card.appendChild(actions);
+      box.appendChild(card);
+    });
+  } catch (erro) {
+    console.error("Erro carregar ferramentas admin:", erro);
+    box.innerHTML = '<div class="admin-tool-empty">Erro ao conectar com o servidor.</div>';
+  }
+}
+
+async function editarFerramentaAdmin(id) {
+  const item = ferramentasAdminCache.find(function(x) { return String(x.id) === String(id); });
+  if (!item) return;
+  document.getElementById("adminFerramentaId").value = item.id || "";
+  document.getElementById("adminFerramentaTitulo").value = item.titulo || "";
+  document.getElementById("adminFerramentaTexto").value = item.texto || "";
+  document.getElementById("adminFerramentaLink").value = item.link || "";
+  adminFerramentaImagemSelecionada = null;
+  const file = document.getElementById("adminFerramentaImagemFile");
+  if (file) file.value = "";
+  atualizarNomeImagemFerramentaAdmin("Imagem atual mantida (se não escolher outra)");
+  const btn = document.getElementById("adminSalvarFerramentaBtn");
+  if (btn) btn.textContent = "ATUALIZAR FERRAMENTA";
+  const previewBox = document.getElementById("adminFerramentaPreviewBox");
+  const preview = document.getElementById("adminFerramentaImagemPreview");
+  if (previewBox) previewBox.style.display = item.temImagem ? "flex" : "none";
+  if (item.temImagem && preview) {
+    preview.removeAttribute("src");
+    await carregarImagemFerramentaEmElemento(item.id, preview);
+  }
+  mostrarMensagemFerramentaAdmin("Editando: " + String(item.titulo || "ferramenta"), true);
+  document.querySelector(".admin-tools-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function excluirFerramentaAdmin(id, titulo) {
+  if (!confirm('Excluir a ferramenta "' + String(titulo || "") + '"?')) return;
+  const token = String(localStorage.getItem("token") || "").trim();
+  try {
+    const form = new URLSearchParams();
+    form.set("action", "adminExcluirFerramenta");
+    form.set("token", token);
+    form.set("id", String(id || ""));
+    const resposta = await fetch(
+      AUTH_API + "?action=adminExcluirFerramenta&_t=" + Date.now(),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: form.toString()
+      }
+    );
+    const dados = await resposta.json();
+    if (!dados || dados.ok !== true) {
+      mostrarMensagemFerramentaAdmin((dados && dados.mensagem) || "Não foi possível excluir.", false);
+      return;
+    }
+    mostrarMensagemFerramentaAdmin("Ferramenta excluída.", true);
+    limparFormularioFerramentaAdmin();
+    await carregarFerramentasAdmin();
+    await carregarFerramentasDinamicas(true);
+  } catch (erro) {
+    mostrarMensagemFerramentaAdmin("Erro ao conectar com o Google Script.", false);
+  }
+}
+
 // ======================================================
 // PAINEL ADMINISTRATIVO
 // ======================================================
@@ -2151,6 +2683,8 @@ async function abrirAdmin(botao) {
   await carregarPrecosPlanos();
 
   await prepararImagemAdmin();
+
+  await carregarFerramentasAdmin();
 
   await carregarUsuariosAdmin();
 }
@@ -4450,11 +4984,54 @@ document.addEventListener(
 );
 
 
+
+
+// ======================================================
+// ACESSO ÀS FERRAMENTAS LOCAIS - SOMENTE ASSINANTES
+// ======================================================
+async function validarAcessoFerramentaAssinante(nomeFerramenta) {
+  mostrarMensagemEsquema("Verificando sua assinatura...");
+
+  try {
+    const assinatura = await consultarAssinatura();
+
+    if (assinatura && assinatura.ativo === true) {
+      esconderMensagemEsquema();
+      return true;
+    }
+
+    mostrarMensagemEsquema(
+      "🔒 " + String(nomeFerramenta || "Esta ferramenta") +
+      " é exclusiva para usuários com plano ativo.",
+      true
+    );
+
+    setTimeout(function () {
+      const botaoAssinaturas =
+        document.querySelector('.nav button[onclick*="assinaturas"]') ||
+        document.querySelectorAll(".nav button")[2] ||
+        null;
+
+      showPage("assinaturas", botaoAssinaturas);
+    }, 1200);
+
+    return false;
+  } catch (erro) {
+    console.error("Erro ao validar acesso da ferramenta:", erro);
+    mostrarMensagemEsquema(
+      "Não foi possível verificar sua assinatura. Tente novamente.",
+      true
+    );
+    return false;
+  }
+}
+
 // ======================================================
 // MAPTORK - CALCULADORA DE PASTILHA DE VÁLVULA
 // Fórmula: folga medida + pastilha atual - folga manual
 // ======================================================
-function abrirCalculadoraPastilha() {
+async function abrirCalculadoraPastilha() {
+  if (!(await validarAcessoFerramentaAssinante("Calculadora de Pastilha"))) return;
   const calc = document.getElementById("calculadoraPastilha");
   const grid = document.getElementById("esquemasGrid");
   const aviso = document.querySelector("#esquemas .esquema-aviso");
@@ -4626,7 +5203,8 @@ function restaurarEstadoCalculadoraValores() {
   return true;
 }
 
-function abrirCalculadoraValores() {
+async function abrirCalculadoraValores() {
+  if (!(await validarAcessoFerramentaAssinante("Calculadora de Valores"))) return;
   const calc = document.getElementById("calculadoraValores");
   const grid = document.getElementById("esquemasGrid");
   const aviso = document.querySelector("#esquemas .esquema-aviso");
@@ -4880,6 +5458,9 @@ function reabrirCalculadoraValoresSeNecessario() {
 
 // Mantém campos de senha desativados fora das páginas Conta/Admin.
 document.addEventListener("DOMContentLoaded", function () {
+  // Pré-carrega a lista e todas as imagens das ferramentas assim que o MAPTORK abre.
+  // A navegação posterior usa somente o cache em memória desta sessão.
+  carregarFerramentasDinamicas(false);
   const paginaVisivel = document.querySelector('.page:not([style*="display:none"])');
   configurarCamposCredenciaisPorPagina(paginaVisivel ? paginaVisivel.id : "inicio");
 
