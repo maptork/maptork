@@ -1638,6 +1638,106 @@ let ferramentasDinamicasCarregadasNestaSessao = false;
 let ferramentasAdminCache = [];
 let adminFerramentaImagemSelecionada = null;
 
+// Cache persistente das ferramentas/imagens. Isso faz a tela de Ferramentas
+// aparecer imediatamente nas próximas aberturas do site/app, enquanto o
+// servidor é atualizado em segundo plano.
+const MAPTORK_FERRAMENTAS_CACHE_DB = "maptork_ui_cache";
+const MAPTORK_FERRAMENTAS_CACHE_STORE = "config";
+const MAPTORK_FERRAMENTAS_CACHE_KEY = "dynamicToolsV5";
+let ferramentasCacheLocalCarregado = false;
+
+function normalizarFerramentaDinamicaCache(item) {
+  const dado = item || {};
+  return {
+    id: String(dado.id || "").trim(),
+    titulo: String(dado.titulo || "").trim(),
+    texto: String(dado.texto || "").trim(),
+    temImagem: dado.temImagem === true,
+    dataUrl: String(dado.dataUrl || "").trim()
+  };
+}
+
+function abrirBancoCacheFerramentas() {
+  return new Promise(function(resolve, reject) {
+    if (!window.indexedDB) {
+      reject(new Error("IndexedDB indisponível."));
+      return;
+    }
+
+    const pedido = indexedDB.open(MAPTORK_FERRAMENTAS_CACHE_DB, 1);
+    pedido.onupgradeneeded = function(evento) {
+      const banco = evento.target.result;
+      if (!banco.objectStoreNames.contains(MAPTORK_FERRAMENTAS_CACHE_STORE)) {
+        banco.createObjectStore(MAPTORK_FERRAMENTAS_CACHE_STORE);
+      }
+    };
+    pedido.onsuccess = function() { resolve(pedido.result); };
+    pedido.onerror = function() { reject(pedido.error || new Error("Erro ao abrir cache.")); };
+  });
+}
+
+async function salvarFerramentasCacheLocal() {
+  try {
+    const lista = (Array.isArray(ferramentasDinamicasCache) ? ferramentasDinamicasCache : []).map(function(item) {
+      return {
+        id: String(item.id || ""),
+        titulo: String(item.titulo || ""),
+        texto: String(item.texto || ""),
+        temImagem: item.temImagem === true,
+        dataUrl: ferramentasImagensCache[String(item.id || "")] || ""
+      };
+    });
+
+    const banco = await abrirBancoCacheFerramentas();
+    await new Promise(function(resolve, reject) {
+      const tx = banco.transaction(MAPTORK_FERRAMENTAS_CACHE_STORE, "readwrite");
+      tx.objectStore(MAPTORK_FERRAMENTAS_CACHE_STORE).put(lista, MAPTORK_FERRAMENTAS_CACHE_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = function() { reject(tx.error || new Error("Erro ao salvar cache.")); };
+      tx.onabort = function() { reject(tx.error || new Error("Cache cancelado.")); };
+    });
+    banco.close();
+  } catch (erro) {
+    console.warn("Não foi possível salvar o cache das ferramentas:", erro);
+  }
+}
+
+async function obterFerramentasCacheLocal() {
+  try {
+    const banco = await abrirBancoCacheFerramentas();
+    const lista = await new Promise(function(resolve, reject) {
+      const tx = banco.transaction(MAPTORK_FERRAMENTAS_CACHE_STORE, "readonly");
+      const pedido = tx.objectStore(MAPTORK_FERRAMENTAS_CACHE_STORE).get(MAPTORK_FERRAMENTAS_CACHE_KEY);
+      pedido.onsuccess = function() { resolve(Array.isArray(pedido.result) ? pedido.result : []); };
+      pedido.onerror = function() { reject(pedido.error || new Error("Erro ao ler cache.")); };
+    });
+    banco.close();
+    return lista.map(normalizarFerramentaDinamicaCache).filter(function(item) { return !!item.id; });
+  } catch (erro) {
+    return [];
+  }
+}
+
+async function aplicarFerramentasCacheLocalUmaVez() {
+  if (ferramentasCacheLocalCarregado) return;
+  ferramentasCacheLocalCarregado = true;
+
+  const cache = await obterFerramentasCacheLocal();
+  if (!cache.length) return;
+
+  ferramentasDinamicasCache = cache.map(function(item) {
+    if (item.dataUrl) ferramentasImagensCache[String(item.id)] = item.dataUrl;
+    return {
+      id: item.id,
+      titulo: item.titulo,
+      texto: item.texto,
+      temImagem: item.temImagem
+    };
+  });
+
+  renderizarFerramentasDinamicas();
+}
+
 function escaparHtmlFerramenta(texto) {
   return String(texto || "").replace(/[&<>\"']/g, function(c) {
     return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c];
@@ -1670,7 +1770,7 @@ async function prepararImagemFerramentaAdmin(arquivo) {
   const imagem = await carregarImagemDataUrl(original);
   let largura = imagem.naturalWidth || imagem.width || 1;
   let altura = imagem.naturalHeight || imagem.height || 1;
-  const maxLado = 1000;
+  const maxLado = 760;
   const escala = Math.min(1, maxLado / largura, maxLado / altura);
   largura = Math.max(1, Math.round(largura * escala));
   altura = Math.max(1, Math.round(altura * escala));
@@ -1689,12 +1789,12 @@ async function prepararImagemFerramentaAdmin(arquivo) {
   let base64 = extrairBase64DeDataUrl(dataUrl);
 
   if (mimeType === "image/jpeg") {
-    while (tamanhoBase64EmBytes(base64) > 1400 * 1024 && qualidade > 0.55) {
+    while (tamanhoBase64EmBytes(base64) > 800 * 1024 && qualidade > 0.55) {
       qualidade = Number((qualidade - 0.08).toFixed(2));
       dataUrl = canvas.toDataURL("image/jpeg", qualidade);
       base64 = extrairBase64DeDataUrl(dataUrl);
     }
-  } else if (tamanhoBase64EmBytes(base64) > 1800 * 1024) {
+  } else if (tamanhoBase64EmBytes(base64) > 950 * 1024) {
     const webp = canvas.toDataURL("image/webp", 0.86);
     if (webp.indexOf("data:image/webp") === 0) {
       dataUrl = webp;
@@ -1703,7 +1803,7 @@ async function prepararImagemFerramentaAdmin(arquivo) {
     }
   }
 
-  if (tamanhoBase64EmBytes(base64) > 2500 * 1024) {
+  if (tamanhoBase64EmBytes(base64) > 1400 * 1024) {
     throw new Error("A imagem ficou muito grande. Escolha outra imagem.");
   }
 
@@ -1848,9 +1948,6 @@ function renderizarFerramentasDinamicas() {
     texto.className = "muted";
     texto.textContent = String(item.texto || "");
 
-    const selo = document.createElement("div");
-    selo.className = "ferramenta-selo-assinante";
-    selo.textContent = "Assinantes";
 
     const botao = document.createElement("button");
     botao.className = "cta esquema-btn";
@@ -1858,7 +1955,6 @@ function renderizarFerramentasDinamicas() {
     botao.textContent = "ACESSAR FERRAMENTA";
     botao.onclick = function() { abrirFerramentaDinamica(item.id, item.titulo); };
 
-    card.appendChild(selo);
     card.appendChild(media);
     card.appendChild(titulo);
     card.appendChild(texto);
@@ -1869,6 +1965,10 @@ function renderizarFerramentasDinamicas() {
 
 async function preCarregarFerramentasDinamicas(forcarAtualizacao) {
   const forcar = !!forcarAtualizacao;
+
+  // Primeiro mostra instantaneamente a última versão já salva no aparelho/navegador.
+  // A atualização online acontece depois e não deixa os cards vazios.
+  await aplicarFerramentasCacheLocalUmaVez();
 
   if (!forcar && ferramentasDinamicasCarregadasNestaSessao) {
     renderizarFerramentasDinamicas();
@@ -1894,21 +1994,30 @@ async function preCarregarFerramentasDinamicas(forcarAtualizacao) {
       ferramentasDinamicasCarregadasNestaSessao = true;
       renderizarFerramentasDinamicas();
 
-      // Carrega todas as imagens em paralelo logo na entrada do site/app.
-      // Depois a navegação entre páginas não precisa consultar o servidor novamente.
-      await Promise.all(
-        lista
-          .filter(function(item) { return item && item.temImagem && item.id; })
-          .map(function(item) {
-            return obterImagemFerramentaCache(item.id, forcar).catch(function() { return ""; });
-          })
-      );
+      // Atualiza as imagens em segundo plano, no máximo duas por vez.
+      // Se já existir imagem no IndexedDB ela continua visível enquanto a nova chega.
+      const comImagem = lista.filter(function(item) {
+        return item && item.temImagem && item.id;
+      });
+      let cursor = 0;
 
+      async function trabalhadorFerramentas() {
+        while (cursor < comImagem.length) {
+          const item = comImagem[cursor++];
+          const id = String(item.id || "");
+          const imgAnterior = ferramentasImagensCache[id] || "";
+          const novaImagem = await obterImagemFerramentaCache(id, true).catch(function() { return imgAnterior; });
+          if (novaImagem) ferramentasImagensCache[id] = novaImagem;
+          renderizarFerramentasDinamicas();
+        }
+      }
+
+      await Promise.all([trabalhadorFerramentas(), trabalhadorFerramentas()]);
+      await salvarFerramentasCacheLocal();
       renderizarFerramentasDinamicas();
       return lista;
     } catch (erro) {
       console.warn("Não foi possível pré-carregar novas ferramentas:", erro);
-      // Mantém o que já estiver em memória, evitando tela vazia em falha temporária.
       renderizarFerramentasDinamicas();
       return ferramentasDinamicasCache;
     } finally {
@@ -2159,21 +2268,151 @@ let adminEmailSelecionado =
 // ADMIN - IMAGEM DO INÍCIO (GOOGLE APPS SCRIPT)
 // ======================================================
 
-const MAPTORK_HERO_IMAGE_PADRAO = "img/logo.png";
-const MAPTORK_IMAGEM_MAX_LADO = 1600;
+const MAPTORK_IMAGEM_MAX_LADO = 1400;
 const MAPTORK_IMAGEM_MAX_BYTES = 12 * 1024 * 1024;
-const MAPTORK_IMAGEM_MAX_FINAL_BYTES = 10 * 1024 * 1024;
-const MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES = 3 * 1024 * 1024;
-let maptorkHeroImageUrlAtual = "";
-let maptorkHeroImageDataUrlAtual = "";
-let maptorkHeroUploadSelecionado = null;
+const MAPTORK_IMAGEM_MAX_FINAL_BYTES = 3 * 1024 * 1024;
+const MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES = 1400 * 1024;
+const MAPTORK_ATUALIZACAO_INTERVALO_MS = 9000;
 
-// Cache persistente da imagem principal no próprio aparelho/navegador.
-// Isso evita voltar para a imagem padrão ao fechar/reabrir o app caso
-// a consulta ao Google Script demore ou falhe momentaneamente.
+let maptorkHeroUploadSelecionado = null;
+let maptorkAtualizacoesInicio = [];
+let maptorkAtualizacaoIndice = 0;
+let maptorkAtualizacaoTimer = null;
+// Mantém o ID da novidade em edição fora do DOM para evitar perda do ID
+// ao rolar, re-renderizar o Admin ou atualizar a lista.
+let maptorkAtualizacaoEditandoId = "";
+
 const MAPTORK_HERO_CACHE_DB = "maptork_ui_cache";
 const MAPTORK_HERO_CACHE_STORE = "config";
-const MAPTORK_HERO_CACHE_KEY = "heroImage";
+const MAPTORK_ATUALIZACOES_CACHE_KEY = "heroUpdatesV4";
+
+function normalizarAtualizacaoInicio(item) {
+  const dado = item || {};
+  return {
+    id: String(dado.id || "").trim(),
+    titulo: String(dado.titulo || "").trim(),
+    texto: String(dado.texto || "").trim(),
+    link: String(dado.link || "").trim(),
+    url: String(dado.url || "").trim(),
+    dataUrl: String(dado.dataUrl || "").trim(),
+    temImagem: dado.temImagem === true || !!String(dado.url || dado.dataUrl || "").trim()
+  };
+}
+
+function obterAtualizacaoInicioAtual() {
+  if (!Array.isArray(maptorkAtualizacoesInicio) || !maptorkAtualizacoesInicio.length) return null;
+  if (maptorkAtualizacaoIndice < 0 || maptorkAtualizacaoIndice >= maptorkAtualizacoesInicio.length) {
+    maptorkAtualizacaoIndice = 0;
+  }
+  return maptorkAtualizacoesInicio[maptorkAtualizacaoIndice] || null;
+}
+
+function definirImagemComFallback(elemento, link) {
+  if (!elemento) return;
+  const src = String(link || "").trim();
+  if (!src) {
+    elemento.removeAttribute("src");
+    elemento.style.display = "none";
+    return;
+  }
+
+  elemento.style.display = "block";
+  elemento.onload = function() {
+    this.style.display = "block";
+  };
+  elemento.onerror = function() {
+    this.onerror = null;
+    this.removeAttribute("src");
+    this.style.display = "none";
+  };
+  elemento.src = src;
+}
+
+function renderizarDotsAtualizacoes() {
+  const box = document.getElementById("heroAtualizacaoDots");
+  if (!box) return;
+  box.innerHTML = "";
+
+  if (maptorkAtualizacoesInicio.length <= 1) {
+    box.style.display = "none";
+    return;
+  }
+
+  box.style.display = "flex";
+  maptorkAtualizacoesInicio.forEach(function(item, indice) {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "hero-update-dot" + (indice === maptorkAtualizacaoIndice ? " active" : "");
+    dot.setAttribute("aria-label", "Mostrar atualização " + (indice + 1));
+    dot.onclick = function() {
+      mostrarAtualizacaoIndice(indice, true);
+    };
+    box.appendChild(dot);
+  });
+}
+
+function renderizarAtualizacaoInicioAtual() {
+  const area = document.getElementById("heroUpdatesArea");
+  const imagem = document.getElementById("heroImage");
+  const titulo = document.getElementById("heroAtualizacaoTitulo");
+  const texto = document.getElementById("heroAtualizacaoTexto");
+  const botao = document.getElementById("heroAtualizacaoBtn");
+  const contador = document.getElementById("heroAtualizacaoContador");
+  const item = obterAtualizacaoInicioAtual();
+
+  if (!item) {
+    if (area) area.style.display = "none";
+    if (imagem) definirImagemComFallback(imagem, "");
+    if (titulo) titulo.textContent = "";
+    if (texto) texto.textContent = "";
+    if (botao) botao.style.display = "none";
+    if (contador) contador.textContent = "";
+    renderizarDotsAtualizacoes();
+    return;
+  }
+
+  if (area) area.style.display = "block";
+  if (titulo) titulo.textContent = item.titulo;
+  if (texto) texto.textContent = item.texto;
+  if (botao) botao.style.display = item.link ? "inline-flex" : "none";
+  if (contador) {
+    contador.textContent = maptorkAtualizacoesInicio.length > 1
+      ? (maptorkAtualizacaoIndice + 1) + " / " + maptorkAtualizacoesInicio.length
+      : "";
+  }
+
+  definirImagemComFallback(imagem, item.dataUrl || item.url || "");
+  renderizarDotsAtualizacoes();
+}
+
+function iniciarRotacaoAtualizacoes() {
+  if (maptorkAtualizacaoTimer) {
+    clearInterval(maptorkAtualizacaoTimer);
+    maptorkAtualizacaoTimer = null;
+  }
+
+  if (maptorkAtualizacoesInicio.length <= 1) return;
+
+  maptorkAtualizacaoTimer = setInterval(function() {
+    if (document.hidden) return;
+    mostrarAtualizacaoIndice((maptorkAtualizacaoIndice + 1) % maptorkAtualizacoesInicio.length, false);
+  }, MAPTORK_ATUALIZACAO_INTERVALO_MS);
+}
+
+function mostrarAtualizacaoIndice(indice, reiniciarTimer) {
+  if (!maptorkAtualizacoesInicio.length) return;
+  const total = maptorkAtualizacoesInicio.length;
+  maptorkAtualizacaoIndice = ((Number(indice) || 0) % total + total) % total;
+  renderizarAtualizacaoInicioAtual();
+  if (reiniciarTimer) iniciarRotacaoAtualizacoes();
+}
+
+function abrirAtualizacaoInicio() {
+  const item = obterAtualizacaoInicioAtual();
+  const link = String((item && item.link) || "").trim();
+  if (!link) return;
+  abrirLinkFerramenta(link);
+}
 
 function abrirBancoCacheImagemInicio() {
   return new Promise(function(resolve, reject) {
@@ -2183,118 +2422,195 @@ function abrirBancoCacheImagemInicio() {
     }
 
     const pedido = indexedDB.open(MAPTORK_HERO_CACHE_DB, 1);
-
     pedido.onupgradeneeded = function(evento) {
       const banco = evento.target.result;
       if (!banco.objectStoreNames.contains(MAPTORK_HERO_CACHE_STORE)) {
         banco.createObjectStore(MAPTORK_HERO_CACHE_STORE);
       }
     };
-
     pedido.onsuccess = function() { resolve(pedido.result); };
     pedido.onerror = function() { reject(pedido.error || new Error("Erro ao abrir cache.")); };
   });
 }
 
-async function salvarImagemInicioCacheLocal(src) {
-  const valor = String(src || "").trim();
-  if (!valor) return;
-
+async function salvarAtualizacoesInicioCacheLocal(lista) {
   try {
     const banco = await abrirBancoCacheImagemInicio();
     await new Promise(function(resolve, reject) {
       const tx = banco.transaction(MAPTORK_HERO_CACHE_STORE, "readwrite");
-      tx.objectStore(MAPTORK_HERO_CACHE_STORE).put(valor, MAPTORK_HERO_CACHE_KEY);
-      tx.oncomplete = function() { resolve(); };
+      tx.objectStore(MAPTORK_HERO_CACHE_STORE).put(lista || [], MAPTORK_ATUALIZACOES_CACHE_KEY);
+      tx.oncomplete = resolve;
       tx.onerror = function() { reject(tx.error || new Error("Erro ao salvar cache.")); };
       tx.onabort = function() { reject(tx.error || new Error("Cache cancelado.")); };
     });
     banco.close();
   } catch (erro) {
-    console.warn("Não foi possível salvar o cache local da imagem:", erro);
+    console.warn("Não foi possível salvar o cache das atualizações:", erro);
   }
 }
 
-async function obterImagemInicioCacheLocal() {
+async function obterAtualizacoesInicioCacheLocal() {
   try {
     const banco = await abrirBancoCacheImagemInicio();
-    const valor = await new Promise(function(resolve, reject) {
+    const lista = await new Promise(function(resolve, reject) {
       const tx = banco.transaction(MAPTORK_HERO_CACHE_STORE, "readonly");
-      const pedido = tx.objectStore(MAPTORK_HERO_CACHE_STORE).get(MAPTORK_HERO_CACHE_KEY);
-      pedido.onsuccess = function() { resolve(String(pedido.result || "").trim()); };
+      const pedido = tx.objectStore(MAPTORK_HERO_CACHE_STORE).get(MAPTORK_ATUALIZACOES_CACHE_KEY);
+      pedido.onsuccess = function() { resolve(Array.isArray(pedido.result) ? pedido.result : []); };
       pedido.onerror = function() { reject(pedido.error || new Error("Erro ao ler cache.")); };
     });
     banco.close();
-    return valor;
+    return lista.map(normalizarAtualizacaoInicio).filter(function(item) { return !!item.id; });
   } catch (erro) {
-    return "";
+    return [];
   }
 }
 
-async function apagarImagemInicioCacheLocal() {
+async function carregarImagemAtualizacaoServidor(item) {
+  if (!item || !item.id || !item.temImagem || item.dataUrl) return item;
+
   try {
-    const banco = await abrirBancoCacheImagemInicio();
-    await new Promise(function(resolve, reject) {
-      const tx = banco.transaction(MAPTORK_HERO_CACHE_STORE, "readwrite");
-      tx.objectStore(MAPTORK_HERO_CACHE_STORE).delete(MAPTORK_HERO_CACHE_KEY);
-      tx.oncomplete = function() { resolve(); };
-      tx.onerror = function() { reject(tx.error || new Error("Erro ao apagar cache.")); };
-    });
-    banco.close();
+    const resposta = await fetch(
+      AUTH_API + "?action=obterImagemInicio&id=" + encodeURIComponent(item.id) + "&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    const dados = await resposta.json();
+    if (dados && dados.ok === true) {
+      item.dataUrl = String(dados.dataUrl || "").trim();
+      item.url = String(dados.url || item.url || "").trim();
+    }
   } catch (erro) {
-    console.warn("Não foi possível apagar o cache local da imagem:", erro);
+    console.warn("Imagem da atualização indisponível:", item.id, erro);
   }
+  return item;
 }
 
-function normalizarLinkImagemAdmin(link) {
-  const valor = String(link || "").trim();
-  if (!valor) return MAPTORK_HERO_IMAGE_PADRAO;
+async function preCarregarImagensAtualizacoes() {
+  const lista = maptorkAtualizacoesInicio;
+  if (!lista.length) return;
 
-  let achou = valor.match(/drive\.google\.com\/file\/d\/([^/?#]+)/i);
-  if (achou && achou[1]) {
-    return "https://drive.google.com/thumbnail?id=" +
-      encodeURIComponent(achou[1]) + "&sz=w1600";
+  // Duas imagens por vez para não travar celulares mais simples.
+  let cursor = 0;
+  async function trabalhador() {
+    while (cursor < lista.length) {
+      const indice = cursor++;
+      await carregarImagemAtualizacaoServidor(lista[indice]);
+      if (indice === maptorkAtualizacaoIndice) renderizarAtualizacaoInicioAtual();
+    }
   }
 
-  achou = valor.match(/[?&]id=([^&#]+)/i);
-  if (valor.indexOf("drive.google.com") !== -1 && achou && achou[1]) {
-    let id = achou[1];
-    try { id = decodeURIComponent(id); } catch (erro) {}
-    return "https://drive.google.com/thumbnail?id=" +
-      encodeURIComponent(id) + "&sz=w1600";
-  }
-
-  return valor;
+  await Promise.all([trabalhador(), trabalhador()]);
+  await salvarAtualizacoesInicioCacheLocal(lista);
+  renderizarAtualizacaoInicioAtual();
 }
 
-function definirImagemComFallback(elemento, link) {
-  if (!elemento) return;
-  const valor = String(link || "").trim();
-  const destino = valor.indexOf("data:image/") === 0
-    ? valor
-    : normalizarLinkImagemAdmin(valor);
-  elemento.onerror = function() {
-    this.onerror = null;
-    this.src = MAPTORK_HERO_IMAGE_PADRAO;
-  };
-  elemento.src = destino || MAPTORK_HERO_IMAGE_PADRAO;
+async function carregarImagemInicioServidor(forcarAtualizacao) {
+  const cache = await obterAtualizacoesInicioCacheLocal();
+
+  if (!maptorkAtualizacoesInicio.length && cache.length) {
+    maptorkAtualizacoesInicio = cache;
+    maptorkAtualizacaoIndice = 0;
+    renderizarAtualizacaoInicioAtual();
+    iniciarRotacaoAtualizacoes();
+  }
+
+  try {
+    const resposta = await fetch(
+      AUTH_API + "?action=obterImagemInicio&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
+    const dados = await resposta.json();
+    if (!dados || dados.ok !== true) {
+      throw new Error((dados && dados.mensagem) || "Resposta inválida.");
+    }
+
+    let lista = Array.isArray(dados.atualizacoes)
+      ? dados.atualizacoes.map(normalizarAtualizacaoInicio)
+      : [];
+
+    // Compatibilidade com o servidor antigo de atualização única.
+    if (!lista.length && (dados.titulo || dados.texto || dados.link)) {
+      lista = [normalizarAtualizacaoInicio({
+        id: dados.id || "legacy",
+        titulo: dados.titulo,
+        texto: dados.texto,
+        link: dados.link,
+        url: dados.url,
+        dataUrl: dados.dataUrl,
+        temImagem: !!(dados.url || dados.dataUrl)
+      })];
+    }
+
+    const cachePorId = Object.create(null);
+    cache.forEach(function(item) {
+      cachePorId[String(item.id)] = item;
+    });
+
+    lista.forEach(function(item) {
+      const antigo = cachePorId[String(item.id)];
+      if (antigo && antigo.dataUrl) item.dataUrl = antigo.dataUrl;
+    });
+
+    maptorkAtualizacoesInicio = lista.filter(function(item) { return !!item.id; });
+    if (maptorkAtualizacaoIndice >= maptorkAtualizacoesInicio.length) maptorkAtualizacaoIndice = 0;
+
+    renderizarAtualizacaoInicioAtual();
+    renderizarAtualizacaoAdmin();
+    iniciarRotacaoAtualizacoes();
+
+    await preCarregarImagensAtualizacoes();
+    return maptorkAtualizacoesInicio;
+  } catch (erro) {
+    console.warn("Não foi possível atualizar as novidades pelo servidor:", erro);
+    renderizarAtualizacaoInicioAtual();
+    renderizarAtualizacaoAdmin();
+    iniciarRotacaoAtualizacoes();
+    return maptorkAtualizacoesInicio;
+  }
 }
 
 function mostrarMensagemImagemAdmin(texto, sucesso) {
   const msg = document.getElementById("adminImagemMensagem");
   if (!msg) return;
+  const valor = String(texto || "").trim();
+
+  if (!valor) {
+    msg.textContent = "";
+    msg.className = "diagnostic-result";
+    msg.style.display = "none";
+    return;
+  }
+
   msg.style.display = "block";
   msg.className = sucesso
     ? "diagnostic-result success-box"
     : "diagnostic-result error-box";
-  msg.textContent = texto;
+  msg.textContent = valor;
 }
 
 function atualizarNomeArquivoImagemAdmin(texto) {
   const nome = document.getElementById("adminHeroImageNome");
-  if (nome) {
-    nome.textContent = texto || "Nenhuma imagem selecionada";
+  if (nome) nome.textContent = texto || "Nenhuma imagem selecionada";
+}
+
+function mostrarPreviewAtualizacaoAdmin(src) {
+  const box = document.getElementById("adminHeroPreviewBox");
+  const img = document.getElementById("adminHeroImagePreview");
+  const valor = String(src || "").trim();
+
+  if (!valor) {
+    if (box) {
+      box.style.display = "none";
+      box.classList.add("is-empty");
+    }
+    if (img) img.removeAttribute("src");
+    return;
   }
+
+  if (box) {
+    box.style.display = "flex";
+    box.classList.remove("is-empty");
+  }
+  definirImagemComFallback(img, valor);
 }
 
 function limparSelecaoImagemAdmin(manterPreviewAtual) {
@@ -2303,9 +2619,8 @@ function limparSelecaoImagemAdmin(manterPreviewAtual) {
   if (input) input.value = "";
   atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
 
-  if (manterPreviewAtual) {
-    const imagemAtual = maptorkHeroImageDataUrlAtual || maptorkHeroImageUrlAtual || MAPTORK_HERO_IMAGE_PADRAO;
-    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), imagemAtual);
+  if (!manterPreviewAtual) {
+    mostrarPreviewAtualizacaoAdmin("");
   }
 }
 
@@ -2328,12 +2643,11 @@ function carregarImagemDataUrl(dataUrl) {
 }
 
 function gerarNomeImagemUploadAdmin(nomeOriginal, mimeType) {
-  let base = String(nomeOriginal || "maptork_inicio")
+  let base = String(nomeOriginal || "maptork_atualizacao")
     .replace(/\.[^.]+$/, "")
     .replace(/[^a-zA-Z0-9_-]+/g, "_")
     .replace(/^_+|_+$/g, "");
-
-  if (!base) base = "maptork_inicio";
+  if (!base) base = "maptork_atualizacao";
 
   let ext = "jpg";
   if (mimeType === "image/png") ext = "png";
@@ -2349,11 +2663,9 @@ function extrairBase64DeDataUrl(dataUrl) {
 function tamanhoBase64EmBytes(base64) {
   const valor = String(base64 || "");
   if (!valor) return 0;
-
   let padding = 0;
   if (valor.endsWith("==")) padding = 2;
   else if (valor.endsWith("=")) padding = 1;
-
   return Math.max(0, Math.floor((valor.length * 3) / 4) - padding);
 }
 
@@ -2363,15 +2675,13 @@ async function prepararArquivoImagemAdmin(arquivo) {
     throw new Error("Selecione um arquivo de imagem válido.");
   }
   if (arquivo.size > MAPTORK_IMAGEM_MAX_BYTES) {
-    throw new Error("A imagem é muito grande. Escolha uma imagem de até 12 MB.");
+    throw new Error("A imagem original deve ter no máximo 12 MB.");
   }
 
-  const dataUrlOriginal = await lerArquivoComoDataUrl(arquivo);
-  const imagem = await carregarImagemDataUrl(dataUrlOriginal);
-  let largura = imagem.naturalWidth || imagem.width || 0;
-  let altura = imagem.naturalHeight || imagem.height || 0;
-  if (!largura || !altura) throw new Error("Não foi possível identificar o tamanho da imagem.");
-
+  const original = await lerArquivoComoDataUrl(arquivo);
+  const imagem = await carregarImagemDataUrl(original);
+  let largura = imagem.naturalWidth || imagem.width || 1;
+  let altura = imagem.naturalHeight || imagem.height || 1;
   const escala = Math.min(1, MAPTORK_IMAGEM_MAX_LADO / largura, MAPTORK_IMAGEM_MAX_LADO / altura);
   largura = Math.max(1, Math.round(largura * escala));
   altura = Math.max(1, Math.round(altura * escala));
@@ -2385,37 +2695,31 @@ async function prepararArquivoImagemAdmin(arquivo) {
   ctx.drawImage(imagem, 0, 0, largura, altura);
 
   let mimeType = String(arquivo.type || "").toLowerCase() === "image/png" ? "image/png" : "image/jpeg";
-  let qualidade = mimeType === "image/png" ? undefined : 0.92;
+  let qualidade = mimeType === "image/png" ? undefined : 0.9;
   let dataUrl = canvas.toDataURL(mimeType, qualidade);
   let base64 = extrairBase64DeDataUrl(dataUrl);
 
-  // O app continua aceitando até 10 MB finais, mas tenta manter a imagem
-  // de exibição perto de 3 MB. Isso deixa a recuperação após fechar/reabrir
-  // o aplicativo muito mais confiável.
   if (mimeType === "image/jpeg") {
-    while (tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES && qualidade > 0.55) {
-      qualidade = Number((qualidade - 0.07).toFixed(2));
+    while (tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES && qualidade > 0.5) {
+      qualidade = Number((qualidade - 0.08).toFixed(2));
       dataUrl = canvas.toDataURL("image/jpeg", qualidade);
       base64 = extrairBase64DeDataUrl(dataUrl);
     }
-  } else if (mimeType === "image/png" && tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES) {
-    // WEBP preserva transparência e costuma ficar bem menor que PNG.
-    const tentativasWebp = [0.92, 0.84, 0.76];
-    for (let i = 0; i < tentativasWebp.length; i++) {
-      const candidato = canvas.toDataURL("image/webp", tentativasWebp[i]);
-      if (candidato.indexOf("data:image/webp") === 0) {
-        const candidatoBase64 = extrairBase64DeDataUrl(candidato);
-        dataUrl = candidato;
-        base64 = candidatoBase64;
+  } else if (tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES) {
+    const qualidades = [0.9, 0.82, 0.74];
+    for (let i = 0; i < qualidades.length; i++) {
+      const webp = canvas.toDataURL("image/webp", qualidades[i]);
+      if (webp.indexOf("data:image/webp") === 0) {
+        dataUrl = webp;
+        base64 = extrairBase64DeDataUrl(webp);
         mimeType = "image/webp";
-        qualidade = tentativasWebp[i];
         if (tamanhoBase64EmBytes(base64) <= MAPTORK_IMAGEM_ALVO_PERSISTENCIA_BYTES) break;
       }
     }
   }
 
   if (tamanhoBase64EmBytes(base64) > MAPTORK_IMAGEM_MAX_FINAL_BYTES) {
-    throw new Error("A imagem final ficou maior que 10 MB. Escolha outra imagem ou use JPG.");
+    throw new Error("A imagem ficou muito grande mesmo após a redução. Escolha outra imagem.");
   }
 
   return {
@@ -2429,7 +2733,8 @@ async function prepararArquivoImagemAdmin(arquivo) {
 async function aoSelecionarImagemAdmin() {
   const input = document.getElementById("adminHeroImageFile");
   if (!input || !input.files || !input.files[0]) {
-    limparSelecaoImagemAdmin(true);
+    maptorkHeroUploadSelecionado = null;
+    atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
     return;
   }
 
@@ -2438,224 +2743,354 @@ async function aoSelecionarImagemAdmin() {
 
   try {
     mostrarMensagemImagemAdmin("Preparando imagem...", true);
-    const pacote = await prepararArquivoImagemAdmin(arquivo);
-    maptorkHeroUploadSelecionado = pacote;
-    const preview = document.getElementById("adminHeroImagePreview");
-    if (preview) {
-      preview.onerror = null;
-      preview.src = pacote.dataUrl;
-    }
+    maptorkHeroUploadSelecionado = await prepararArquivoImagemAdmin(arquivo);
+    mostrarPreviewAtualizacaoAdmin(maptorkHeroUploadSelecionado.dataUrl);
     mostrarMensagemImagemAdmin("Imagem pronta para salvar.", true);
   } catch (erro) {
     console.error("Erro ao preparar imagem:", erro);
-    limparSelecaoImagemAdmin(true);
+    maptorkHeroUploadSelecionado = null;
+    if (input) input.value = "";
+    atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
     mostrarMensagemImagemAdmin((erro && erro.message) || "Não foi possível preparar a imagem selecionada.", false);
   }
 }
 
-async function carregarImagemInicioServidor() {
-  // Mostra primeiro a última imagem salva no aparelho. Ela permanece mesmo
-  // depois de fechar o aplicativo ou sair da conta.
-  const cacheLocal = await obterImagemInicioCacheLocal();
+function preencherFormularioAtualizacaoAdmin(item) {
+  const dado = item || null;
+  const id = document.getElementById("adminHeroAtualizacaoId");
+  const titulo = document.getElementById("adminHeroTitulo");
+  const texto = document.getElementById("adminHeroTexto");
+  const link = document.getElementById("adminHeroLink");
+  const botao = document.getElementById("adminSalvarImagemBtn");
 
-  if (cacheLocal) {
-    maptorkHeroImageDataUrlAtual = cacheLocal.indexOf("data:image/") === 0 ? cacheLocal : "";
-    maptorkHeroImageUrlAtual = maptorkHeroImageDataUrlAtual ? "" : cacheLocal;
-    definirImagemComFallback(document.getElementById("heroImage"), cacheLocal);
-    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), cacheLocal);
+  maptorkAtualizacaoEditandoId = dado ? String(dado.id || "").trim() : "";
+  if (id) id.value = maptorkAtualizacaoEditandoId;
+  if (titulo) titulo.value = dado ? dado.titulo : "";
+  if (texto) texto.value = dado ? dado.texto : "";
+  if (link) link.value = dado ? dado.link : "";
+
+  maptorkHeroUploadSelecionado = null;
+  const input = document.getElementById("adminHeroImageFile");
+  if (input) input.value = "";
+
+  if (dado) {
+    atualizarNomeArquivoImagemAdmin("Imagem atual mantida (se não escolher outra)");
+    mostrarPreviewAtualizacaoAdmin(dado.dataUrl || dado.url || "");
+    if (botao) botao.textContent = "SALVAR ALTERAÇÕES";
+  } else {
+    atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
+    mostrarPreviewAtualizacaoAdmin("");
+    if (botao) botao.textContent = "ADICIONAR ATUALIZAÇÃO";
+  }
+}
+
+function limparFormularioAtualizacaoAdmin() {
+  preencherFormularioAtualizacaoAdmin(null);
+  mostrarMensagemImagemAdmin("", true);
+}
+
+function editarAtualizacaoInicioAdmin(id) {
+  const item = maptorkAtualizacoesInicio.find(function(x) {
+    return String(x.id) === String(id);
+  });
+  if (!item) return;
+
+  preencherFormularioAtualizacaoAdmin(item);
+  mostrarMensagemImagemAdmin("Editando: " + (item.titulo || "atualização"), true);
+  const card = document.querySelector(".admin-image-card");
+  if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderizarAtualizacaoAdmin() {
+  const box = document.getElementById("adminAtualizacaoLista");
+  if (!box) return;
+  box.innerHTML = "";
+
+  if (!maptorkAtualizacoesInicio.length) {
+    box.innerHTML = '<div class="admin-tool-empty">Nenhuma atualização publicada.</div>';
+    return;
   }
 
-  try {
-    const resposta = await fetch(
-      AUTH_API + "?action=obterImagemInicio&_t=" + Date.now(),
-      { cache: "no-store" }
-    );
+  maptorkAtualizacoesInicio.forEach(function(item) {
+    const card = document.createElement("div");
+    card.className = "admin-tool-item";
 
-    const dados = await resposta.json();
-    if (!dados || dados.ok !== true) {
-      throw new Error((dados && dados.mensagem) || "Resposta inválida.");
-    }
+    const info = document.createElement("div");
+    info.className = "admin-tool-item-info";
 
-    maptorkHeroImageUrlAtual = String(dados.url || "").trim();
-    maptorkHeroImageDataUrlAtual = String(dados.dataUrl || "").trim();
+    const h4 = document.createElement("h4");
+    h4.textContent = item.titulo || "Atualização";
+    const p = document.createElement("p");
+    p.textContent = item.texto || "";
+    const small = document.createElement("small");
+    small.textContent = item.link || "";
 
-    const imagemServidor =
-      maptorkHeroImageDataUrlAtual ||
-      maptorkHeroImageUrlAtual ||
-      "";
+    info.appendChild(h4);
+    info.appendChild(p);
+    info.appendChild(small);
 
-    if (imagemServidor) {
-      definirImagemComFallback(document.getElementById("heroImage"), imagemServidor);
-      definirImagemComFallback(document.getElementById("adminHeroImagePreview"), imagemServidor);
-      await salvarImagemInicioCacheLocal(imagemServidor);
-      return imagemServidor;
-    }
+    const actions = document.createElement("div");
+    actions.className = "admin-tool-item-actions";
 
-    // Se o servidor informa que não existe imagem personalizada, usa a padrão
-    // e remove qualquer cache antigo.
-    await apagarImagemInicioCacheLocal();
-    maptorkHeroImageUrlAtual = "";
-    maptorkHeroImageDataUrlAtual = "";
-    definirImagemComFallback(document.getElementById("heroImage"), MAPTORK_HERO_IMAGE_PADRAO);
-    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), MAPTORK_HERO_IMAGE_PADRAO);
-    return MAPTORK_HERO_IMAGE_PADRAO;
+    const editar = document.createElement("button");
+    editar.type = "button";
+    editar.className = "admin-tool-edit";
+    editar.textContent = "EDITAR";
+    editar.onclick = function() { editarAtualizacaoInicioAdmin(item.id); };
 
-  } catch (erro) {
-    console.warn("Não foi possível atualizar a imagem pelo servidor:", erro);
+    const excluir = document.createElement("button");
+    excluir.type = "button";
+    excluir.className = "admin-tool-delete";
+    excluir.textContent = "EXCLUIR";
+    excluir.onclick = function() { excluirAtualizacaoInicioAdmin(item.id, item.titulo); };
 
-    // Nunca volta para a moto padrão só porque houve falha de rede/Google Script.
-    // Mantém a última imagem que já estava salva no aparelho.
-    if (cacheLocal) {
-      definirImagemComFallback(document.getElementById("heroImage"), cacheLocal);
-      definirImagemComFallback(document.getElementById("adminHeroImagePreview"), cacheLocal);
-      return cacheLocal;
-    }
-
-    definirImagemComFallback(document.getElementById("heroImage"), MAPTORK_HERO_IMAGE_PADRAO);
-    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), MAPTORK_HERO_IMAGE_PADRAO);
-    return "";
-  }
+    actions.appendChild(editar);
+    actions.appendChild(excluir);
+    card.appendChild(info);
+    card.appendChild(actions);
+    box.appendChild(card);
+  });
 }
 
 async function salvarImagemInicioAdmin() {
   const botao = document.getElementById("adminSalvarImagemBtn");
   const token = localStorage.getItem("token") || "";
-  if (!token) {
-    mostrarMensagemImagemAdmin("Sessão inválida. Entre novamente na conta.", false);
-    return;
-  }
+  const idCampo = String((document.getElementById("adminHeroAtualizacaoId") || {}).value || "").trim();
+  const id = String(maptorkAtualizacaoEditandoId || idCampo || "").trim();
+  const titulo = String((document.getElementById("adminHeroTitulo") || {}).value || "").trim();
+  const texto = String((document.getElementById("adminHeroTexto") || {}).value || "").trim();
+  const link = String((document.getElementById("adminHeroLink") || {}).value || "").trim();
+
+  if (!token) return mostrarMensagemImagemAdmin("Sessão inválida. Entre novamente na conta.", false);
+  if (!titulo || !texto || !link) return mostrarMensagemImagemAdmin("Preencha nome/cabeçalho, texto e link.", false);
+  if (titulo.length > 80) return mostrarMensagemImagemAdmin("O nome/cabeçalho pode ter no máximo 80 caracteres.", false);
+  if (texto.length > 500) return mostrarMensagemImagemAdmin("O texto pode ter no máximo 500 caracteres.", false);
+  if (!/^https?:\/\//i.test(link)) return mostrarMensagemImagemAdmin("O link precisa começar com http:// ou https://.", false);
+
+  const itemEditando = id ? maptorkAtualizacoesInicio.find(function(x) { return String(x.id) === id; }) : null;
 
   if (!maptorkHeroUploadSelecionado || !maptorkHeroUploadSelecionado.base64) {
     const input = document.getElementById("adminHeroImageFile");
     if (input && input.files && input.files[0]) {
       try {
-        atualizarNomeArquivoImagemAdmin(input.files[0].name || "Imagem selecionada");
         mostrarMensagemImagemAdmin("Preparando imagem...", true);
         maptorkHeroUploadSelecionado = await prepararArquivoImagemAdmin(input.files[0]);
       } catch (erro) {
-        mostrarMensagemImagemAdmin((erro && erro.message) || "Não foi possível preparar a imagem.", false);
-        return;
+        return mostrarMensagemImagemAdmin((erro && erro.message) || "Não foi possível preparar a imagem.", false);
       }
     }
   }
 
-  if (!maptorkHeroUploadSelecionado || !maptorkHeroUploadSelecionado.base64) {
-    mostrarMensagemImagemAdmin("Toque em SELECIONAR IMAGEM e escolha uma foto antes de salvar.", false);
-    return;
+  if (!itemEditando && !maptorkHeroUploadSelecionado) {
+    return mostrarMensagemImagemAdmin("Selecione uma imagem para a nova atualização.", false);
   }
 
   if (botao) {
     botao.disabled = true;
-    botao.textContent = "ENVIANDO...";
+    botao.textContent = "SALVANDO...";
   }
-  mostrarMensagemImagemAdmin("Enviando imagem para o Google Script...", true);
+  mostrarMensagemImagemAdmin(id ? "Salvando alterações..." : "Adicionando atualização...", true);
 
   try {
     const form = new URLSearchParams();
     form.set("action", "adminSalvarImagemInicio");
     form.set("token", token);
-    form.set("fileName", maptorkHeroUploadSelecionado.fileName);
-    form.set("mimeType", maptorkHeroUploadSelecionado.mimeType);
-    form.set("imageBase64", maptorkHeroUploadSelecionado.base64);
+    if (id) {
+      form.set("id", id);
+      form.set("idAtualizacao", id);
+      form.set("modo", "editar");
+    } else {
+      form.set("modo", "novo");
+    }
+    form.set("titulo", titulo);
+    form.set("texto", texto);
+    form.set("link", link);
 
-    // A action vai também na URL para o Apps Script reconhecer a rota
-    // mesmo que o corpo do POST seja processado de forma diferente no WebView.
+    if (maptorkHeroUploadSelecionado && maptorkHeroUploadSelecionado.base64) {
+      form.set("fileName", maptorkHeroUploadSelecionado.fileName);
+      form.set("mimeType", maptorkHeroUploadSelecionado.mimeType);
+      form.set("imageBase64", maptorkHeroUploadSelecionado.base64);
+    }
+
     const resposta = await fetch(
-      AUTH_API + "?action=adminSalvarImagemInicio&_t=" + Date.now(),
+      AUTH_API + "?action=adminSalvarImagemInicio" +
+        (id ? "&id=" + encodeURIComponent(id) + "&idAtualizacao=" + encodeURIComponent(id) + "&modo=editar" : "&modo=novo") +
+        "&_t=" + Date.now(),
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
         body: form.toString()
       }
     );
-
     const dados = await resposta.json();
+
     if (!dados || dados.ok !== true) {
-      const mensagemServidor = String((dados && dados.mensagem) || "").trim();
-      mostrarMensagemImagemAdmin(
-        mensagemServidor || "Não foi possível salvar a imagem no servidor.",
-        false
-      );
-      return;
+      return mostrarMensagemImagemAdmin((dados && dados.mensagem) || "Não foi possível salvar a atualização.", false);
     }
 
-    maptorkHeroImageUrlAtual = String(dados.url || "").trim();
-    maptorkHeroImageDataUrlAtual = String(
-      dados.dataUrl || maptorkHeroUploadSelecionado.dataUrl || ""
-    ).trim();
+    // Atualiza o item local imediatamente. Assim a edição aparece na tela
+    // mesmo antes da nova leitura do Google Script terminar.
+    const idSalvo = String((dados && dados.id) || id || "").trim();
+    if (idSalvo) {
+      const existenteLocal = maptorkAtualizacoesInicio.find(function(x) {
+        return String(x.id) === idSalvo;
+      });
+      const dataUrlNova = String((dados && dados.dataUrl) || "").trim();
+      const urlNova = String((dados && dados.url) || "").trim();
+      if (existenteLocal) {
+        existenteLocal.titulo = titulo;
+        existenteLocal.texto = texto;
+        existenteLocal.link = link;
+        if (dataUrlNova) existenteLocal.dataUrl = dataUrlNova;
+        if (urlNova) existenteLocal.url = urlNova;
+      } else {
+        maptorkAtualizacoesInicio.unshift(normalizarAtualizacaoInicio({
+          id: idSalvo,
+          titulo: titulo,
+          texto: texto,
+          link: link,
+          url: urlNova,
+          dataUrl: dataUrlNova,
+          temImagem: true
+        }));
+      }
+      renderizarAtualizacaoInicioAtual();
+      renderizarAtualizacaoAdmin();
+      await salvarAtualizacoesInicioCacheLocal(maptorkAtualizacoesInicio);
+    }
 
-    const imagemSalva =
-      maptorkHeroImageDataUrlAtual ||
-      maptorkHeroImageUrlAtual ||
-      MAPTORK_HERO_IMAGE_PADRAO;
-
-    definirImagemComFallback(document.getElementById("heroImage"), imagemSalva);
-    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), imagemSalva);
-    await salvarImagemInicioCacheLocal(imagemSalva);
-    limparSelecaoImagemAdmin(false);
-    mostrarMensagemImagemAdmin("Imagem enviada com sucesso.", true);
+    limparFormularioAtualizacaoAdmin();
+    await carregarImagemInicioServidor(true);
+    mostrarMensagemImagemAdmin(id ? "Atualização editada com sucesso." : "Nova atualização adicionada com sucesso.", true);
   } catch (erro) {
-    console.error("Erro ao salvar imagem no servidor:", erro);
+    console.error("Erro ao salvar atualização:", erro);
     mostrarMensagemImagemAdmin("Erro ao conectar com o Google Script.", false);
   } finally {
     if (botao) {
       botao.disabled = false;
-      botao.textContent = "SALVAR IMAGEM";
+      const editandoCampo = String((document.getElementById("adminHeroAtualizacaoId") || {}).value || "").trim();
+      const editando = String(maptorkAtualizacaoEditandoId || editandoCampo || "").trim();
+      botao.textContent = editando ? "SALVAR ALTERAÇÕES" : "ADICIONAR ATUALIZAÇÃO";
     }
   }
 }
 
-async function restaurarImagemInicioAdmin() {
+async function excluirAtualizacaoInicioAdmin(id, titulo) {
   const token = localStorage.getItem("token") || "";
-  if (!token) {
-    mostrarMensagemImagemAdmin("Sessão inválida. Entre novamente na conta.", false);
-    return;
-  }
+  if (!token) return mostrarMensagemImagemAdmin("Sessão inválida. Entre novamente na conta.", false);
+  if (!id) return;
 
-  const confirmou = window.confirm("Deseja restaurar a imagem padrão da moto no início?");
-  if (!confirmou) return;
+  if (!window.confirm('Excluir a atualização "' + String(titulo || "") + '"?')) return;
 
   try {
     const form = new URLSearchParams();
     form.set("action", "adminRestaurarImagemInicio");
     form.set("token", token);
+    form.set("id", String(id));
 
     const resposta = await fetch(
       AUTH_API + "?action=adminRestaurarImagemInicio&_t=" + Date.now(),
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
         body: form.toString()
       }
     );
     const dados = await resposta.json();
 
     if (!dados || dados.ok !== true) {
-      mostrarMensagemImagemAdmin((dados && dados.mensagem) || "Não foi possível restaurar a imagem padrão.", false);
-      return;
+      return mostrarMensagemImagemAdmin((dados && dados.mensagem) || "Não foi possível excluir a atualização.", false);
     }
 
-    maptorkHeroImageUrlAtual = "";
-    maptorkHeroImageDataUrlAtual = "";
-    await apagarImagemInicioCacheLocal();
-    limparSelecaoImagemAdmin(false);
-    definirImagemComFallback(document.getElementById("heroImage"), MAPTORK_HERO_IMAGE_PADRAO);
-    definirImagemComFallback(document.getElementById("adminHeroImagePreview"), MAPTORK_HERO_IMAGE_PADRAO);
-    mostrarMensagemImagemAdmin("Imagem padrão da moto restaurada para todos.", true);
+    limparFormularioAtualizacaoAdmin();
+    await carregarImagemInicioServidor(true);
+    mostrarMensagemImagemAdmin("Atualização excluída.", true);
   } catch (erro) {
-    console.error("Erro ao restaurar imagem:", erro);
+    console.error("Erro ao excluir atualização:", erro);
     mostrarMensagemImagemAdmin("Erro ao conectar com o Google Script.", false);
   }
 }
 
-async function prepararImagemAdmin() {
-  await carregarImagemInicioServidor();
-  atualizarNomeArquivoImagemAdmin("Nenhuma imagem selecionada");
+// Mantido com o nome antigo apenas por compatibilidade com qualquer chamada antiga.
+async function restaurarImagemInicioAdmin() {
+  const item = obterAtualizacaoInicioAtual();
+  if (item) return excluirAtualizacaoInicioAdmin(item.id, item.titulo);
 }
+
+async function prepararImagemAdmin() {
+  await carregarImagemInicioServidor(false);
+  limparFormularioAtualizacaoAdmin();
+  renderizarAtualizacaoAdmin();
+}
+
+
+// ======================================================
+// MENU DE CONFIGURAÇÕES DO ADMIN
+// ======================================================
+
+let adminConfigAtual = "";
+
+function mostrarMenuAdmin() {
+  adminConfigAtual = "";
+
+  const menu = document.getElementById("adminConfigMenu");
+  if (menu) menu.style.display = "block";
+
+  document.querySelectorAll(".admin-config-panel").forEach(function(painel) {
+    painel.classList.remove("is-open");
+  });
+
+  cancelarSenhaAdmin();
+
+  const pagina = document.getElementById("admin");
+  if (pagina) {
+    pagina.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+async function abrirConfiguracaoAdmin(nome) {
+  const alvo = String(nome || "").trim().toLowerCase();
+  const mapa = {
+    planos: "adminConfigPlanos",
+    atualizacoes: "adminConfigAtualizacoes",
+    ferramentas: "adminConfigFerramentas",
+    usuarios: "adminConfigUsuarios"
+  };
+
+  const idPainel = mapa[alvo];
+  if (!idPainel) return;
+
+  adminConfigAtual = alvo;
+
+  const menu = document.getElementById("adminConfigMenu");
+  if (menu) menu.style.display = "none";
+
+  document.querySelectorAll(".admin-config-panel").forEach(function(painel) {
+    painel.classList.toggle("is-open", painel.id === idPainel);
+  });
+
+  const painel = document.getElementById(idPainel);
+  if (painel) {
+    painel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  try {
+    if (alvo === "planos") {
+      await carregarPrecosPlanos();
+    } else if (alvo === "atualizacoes") {
+      await prepararImagemAdmin();
+    } else if (alvo === "ferramentas") {
+      await carregarFerramentasAdmin();
+    } else if (alvo === "usuarios") {
+      await carregarUsuariosAdmin();
+    }
+  } catch (erro) {
+    console.error("Erro ao abrir configuração do Admin:", erro);
+  }
+}
+
 
 // ======================================================
 // ABRIR ADMIN
@@ -2670,23 +3105,12 @@ async function abrirAdmin(botao) {
     return;
   }
 
-
   showPage(
     "admin",
     botao
   );
 
-
-  cancelarSenhaAdmin();
-
-
-  await carregarPrecosPlanos();
-
-  await prepararImagemAdmin();
-
-  await carregarFerramentasAdmin();
-
-  await carregarUsuariosAdmin();
+  mostrarMenuAdmin();
 }
 
 

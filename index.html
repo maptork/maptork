@@ -517,17 +517,39 @@ verificarSessao();
 
 <div class="hero">
 
+<div id="heroUpdatesArea" class="hero-updates-area" style="display:none">
+  <div class="hero-updates-heading-row">
+    <div class="hero-updates-heading">NOVAS ATUALIZAÇÕES</div>
+    <div id="heroAtualizacaoContador" class="hero-update-counter"></div>
+  </div>
 
-<img
-  id="heroImage"
-  src="img/logo.png"
-  class="moto-01"
-  alt="Imagem principal MAPTORK"
->
+  <div class="hero-update-media">
+    <img
+      id="heroImage"
+      class="moto-01"
+      alt="Imagem da atualização MAPTORK"
+      style="display:none"
+    >
+  </div>
 
+  <div id="heroAtualizacao" class="hero-update">
+    <h2 id="heroAtualizacaoTitulo" class="hero-update-title"></h2>
+    <p id="heroAtualizacaoTexto" class="hero-update-text"></p>
+    <button
+      id="heroAtualizacaoBtn"
+      class="hero-update-btn"
+      type="button"
+      onclick="abrirAtualizacaoInicio()"
+      style="display:none"
+    >
+      VER ATUALIZAÇÃO
+    </button>
+  </div>
 
-<div>
+  <div id="heroAtualizacaoDots" class="hero-update-dots" aria-label="Navegação das atualizações"></div>
+</div>
 
+<div class="hero-content">
 
 <h1>
 
@@ -589,6 +611,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="honda"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -612,6 +638,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="yamaha"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -635,6 +665,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="suzuki"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -658,6 +692,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="bmw"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -681,6 +719,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="ktm"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -704,6 +746,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="ducati"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -727,6 +773,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="triumph"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -750,6 +800,10 @@ conteúdo técnico em um só lugar.
 <div
   class="card"
   data-key="harley"
+  role="button"
+  tabindex="0"
+  onclick="openPage('manuais',1)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPage('manuais',1);}"
 >
 
 <img
@@ -1936,13 +1990,64 @@ Gerenciamento do MAPTORK.
 </p>
 
 
+<!-- ================================================== -->
+<!-- MENU DE CONFIGURAÇÕES DO ADMIN -->
+<!-- ================================================== -->
+
+<div id="adminConfigMenu" class="admin-config-menu card">
+  <div class="admin-config-menu-head">
+    <h3>Configurações</h3>
+    <p>Escolha o que deseja gerenciar.</p>
+  </div>
+
+  <div class="admin-config-list">
+    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('planos')">
+      <span class="admin-config-icon">R$</span>
+      <span class="admin-config-copy">
+        <strong>Valores dos Planos</strong>
+        <small>Mensal, trimestral e anual</small>
+      </span>
+      <span class="admin-config-chevron">›</span>
+    </button>
+
+    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('atualizacoes')">
+      <span class="admin-config-icon">↻</span>
+      <span class="admin-config-copy">
+        <strong>Novas Atualizações</strong>
+        <small>Imagem, título, texto e link</small>
+      </span>
+      <span class="admin-config-chevron">›</span>
+    </button>
+
+    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('ferramentas')">
+      <span class="admin-config-icon">🔧</span>
+      <span class="admin-config-copy">
+        <strong>Novas Ferramentas</strong>
+        <small>Adicionar, editar e excluir ferramentas</small>
+      </span>
+      <span class="admin-config-chevron">›</span>
+    </button>
+
+    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('usuarios')">
+      <span class="admin-config-icon">👤</span>
+      <span class="admin-config-copy">
+        <strong>Usuários Cadastrados</strong>
+        <small>Planos, bloqueio e redefinição de senha</small>
+      </span>
+      <span class="admin-config-chevron">›</span>
+    </button>
+  </div>
+</div>
+
+
 
 <!-- ================================================== -->
 <!-- VALORES DOS PLANOS -->
 <!-- ================================================== -->
 
-<div class="card form-card">
+<div id="adminConfigPlanos" class="card form-card admin-config-panel" data-admin-panel="planos">
 
+<button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
 
 <h3>
 
@@ -2066,19 +2171,55 @@ Defina o valor que será cobrado pela InfinitePay.
 
 
 <!-- ================================================== -->
-<!-- IMAGEM DA TELA INICIAL -->
+<!-- IMAGEM DA TELA INICIAL / NOVAS ATUALIZAÇÕES -->
 <!-- ================================================== -->
 
-<div class="card form-card admin-image-card">
+<div id="adminConfigAtualizacoes" class="card form-card admin-image-card admin-config-panel" data-admin-panel="atualizacoes">
 
-<h3>Imagem do Início</h3>
+<button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
+
+<h3>Novas Atualizações</h3>
 
 <p class="admin-image-intro">
-Escolha uma imagem e toque em salvar.
+Cadastre várias novidades. Elas passam automaticamente na tela inicial, uma de cada vez.
 </p>
 
+<input type="hidden" id="adminHeroAtualizacaoId" value="">
+
+<div class="field">
+  <label for="adminHeroTitulo">Nome / cabeçalho</label>
+  <input
+    type="text"
+    id="adminHeroTitulo"
+    maxlength="80"
+    autocomplete="off"
+    placeholder="Ex.: Novo aplicativo MAPTORK OBD2"
+  >
+</div>
+
+<div class="field">
+  <label for="adminHeroTexto">Texto / descrição</label>
+  <textarea
+    id="adminHeroTexto"
+    maxlength="500"
+    rows="4"
+    placeholder="Explique a novidade ou atualização."
+  ></textarea>
+</div>
+
+<div class="field">
+  <label for="adminHeroLink">Link</label>
+  <input
+    type="url"
+    id="adminHeroLink"
+    inputmode="url"
+    autocomplete="off"
+    placeholder="https://..."
+  >
+</div>
+
 <div class="field admin-image-select-field">
-  <label class="admin-field-label">Imagem do celular</label>
+  <label class="admin-field-label">Imagem</label>
   <input
     type="file"
     id="adminHeroImageFile"
@@ -2089,14 +2230,13 @@ Escolha uma imagem e toque em salvar.
     SELECIONAR IMAGEM
   </label>
   <div id="adminHeroImageNome" class="admin-file-name">Nenhuma imagem selecionada</div>
-  <small class="admin-image-help">JPG, PNG ou WEBP. Redução automática.</small>
+  <small class="admin-image-help">JPG, PNG ou WEBP. A imagem é reduzida automaticamente.</small>
 </div>
 
-<div class="admin-image-preview">
+<div class="admin-image-preview is-empty" id="adminHeroPreviewBox" style="display:none">
   <img
     id="adminHeroImagePreview"
-    src="img/logo.png"
-    alt="Pré-visualização da imagem do início"
+    alt="Pré-visualização da atualização"
   >
 </div>
 
@@ -2107,20 +2247,27 @@ Escolha uma imagem e toque em salvar.
     type="button"
     onclick="salvarImagemInicioAdmin()"
   >
-    SALVAR IMAGEM
+    ADICIONAR ATUALIZAÇÃO
   </button>
 
   <button
     class="admin-image-default-btn"
-    id="adminRestaurarImagemBtn"
+    id="adminLimparAtualizacaoBtn"
     type="button"
-    onclick="restaurarImagemInicioAdmin()"
+    onclick="limparFormularioAtualizacaoAdmin()"
   >
-    USAR PADRÃO
+    LIMPAR
   </button>
 </div>
 
 <div id="adminImagemMensagem" class="diagnostic-result"></div>
+
+<div class="admin-tools-list-header">
+  <h4>Atualizações publicadas</h4>
+  <button type="button" class="admin-tools-refresh" onclick="prepararImagemAdmin()">ATUALIZAR</button>
+</div>
+
+<div id="adminAtualizacaoLista" class="admin-tools-list"></div>
 
 </div>
 
@@ -2130,7 +2277,9 @@ Escolha uma imagem e toque em salvar.
 <!-- NOVAS FERRAMENTAS -->
 <!-- ================================================== -->
 
-<div class="card form-card admin-tools-card">
+<div id="adminConfigFerramentas" class="card form-card admin-tools-card admin-config-panel" data-admin-panel="ferramentas">
+
+  <button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
 
   <h3>Novas Ferramentas</h3>
 
@@ -2213,7 +2362,10 @@ Escolha uma imagem e toque em salvar.
   <div id="adminFerramentaMensagem" class="diagnostic-result"></div>
 
   <div class="admin-tools-list-header">
-    <strong>Ferramentas adicionadas</strong>
+    <div>
+      <strong>Ferramentas publicadas</strong>
+      <small class="admin-tools-edit-hint">Use EDITAR para alterar nome, texto, link ou imagem.</small>
+    </div>
     <button type="button" class="admin-tools-refresh" onclick="carregarFerramentasAdmin()">ATUALIZAR</button>
   </div>
 
@@ -2225,6 +2377,10 @@ Escolha uma imagem e toque em salvar.
 <!-- ================================================== -->
 <!-- USUÁRIOS -->
 <!-- ================================================== -->
+
+<div id="adminConfigUsuarios" class="admin-config-panel" data-admin-panel="usuarios">
+
+<button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
 
 <div class="card admin-toolbar">
 
@@ -2388,6 +2544,8 @@ Usuário:
   class="admin-users"
 >
 </div>
+
+</div><!-- /adminConfigUsuarios -->
 
 
 </section>
