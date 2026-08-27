@@ -1599,3 +1599,11 @@ body,
     margin-top:10px!important;
   }
 }
+
+
+/* MAPTORK - suporte com espaço maior acima do card */
+#suporte > p{margin-bottom:0!important;}
+#suporte .suporte-card{margin-top:16px!important;}
+@media(max-width:600px){
+  #suporte .suporte-card{margin-top:18px!important;}
+}

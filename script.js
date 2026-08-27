@@ -1966,10 +1966,9 @@ function renderizarFerramentasDinamicas() {
 async function preCarregarFerramentasDinamicas(forcarAtualizacao) {
   const forcar = !!forcarAtualizacao;
 
-  // Primeiro mostra instantaneamente a última versão já salva no aparelho/navegador.
-  // A atualização online acontece depois e não deixa os cards vazios.
-  await aplicarFerramentasCacheLocalUmaVez();
-
+  // Na primeira abertura da sessão busca a lista no servidor para evitar
+  // reaparecer ferramenta já excluída por causa do cache local.
+  // Depois disso, a navegação entre abas usa o cache desta sessão.
   if (!forcar && ferramentasDinamicasCarregadasNestaSessao) {
     renderizarFerramentasDinamicas();
     return ferramentasDinamicasCache;
@@ -1989,6 +1988,20 @@ async function preCarregarFerramentasDinamicas(forcarAtualizacao) {
       const lista = dados && dados.ok === true && Array.isArray(dados.ferramentas)
         ? dados.ferramentas
         : [];
+
+      // Reaproveita apenas as imagens em cache cujos IDs ainda existem no servidor.
+      const cacheLocal = await obterFerramentasCacheLocal();
+      const cacheLocalPorId = Object.create(null);
+      cacheLocal.forEach(function(item) {
+        cacheLocalPorId[String(item.id || "")] = item;
+      });
+      const novasImagensCache = Object.create(null);
+      lista.forEach(function(item) {
+        const id = String((item && item.id) || "");
+        const antigo = cacheLocalPorId[id];
+        if (antigo && antigo.dataUrl) novasImagensCache[id] = antigo.dataUrl;
+      });
+      ferramentasImagensCache = novasImagensCache;
 
       ferramentasDinamicasCache = lista;
       ferramentasDinamicasCarregadasNestaSessao = true;
@@ -2018,6 +2031,9 @@ async function preCarregarFerramentasDinamicas(forcarAtualizacao) {
       return lista;
     } catch (erro) {
       console.warn("Não foi possível pré-carregar novas ferramentas:", erro);
+      if (!ferramentasDinamicasCache.length) {
+        await aplicarFerramentasCacheLocalUmaVez();
+      }
       renderizarFerramentasDinamicas();
       return ferramentasDinamicasCache;
     } finally {
@@ -2506,13 +2522,6 @@ async function preCarregarImagensAtualizacoes() {
 async function carregarImagemInicioServidor(forcarAtualizacao) {
   const cache = await obterAtualizacoesInicioCacheLocal();
 
-  if (!maptorkAtualizacoesInicio.length && cache.length) {
-    maptorkAtualizacoesInicio = cache;
-    maptorkAtualizacaoIndice = 0;
-    renderizarAtualizacaoInicioAtual();
-    iniciarRotacaoAtualizacoes();
-  }
-
   try {
     const resposta = await fetch(
       AUTH_API + "?action=obterImagemInicio&_t=" + Date.now(),
@@ -2561,6 +2570,10 @@ async function carregarImagemInicioServidor(forcarAtualizacao) {
     return maptorkAtualizacoesInicio;
   } catch (erro) {
     console.warn("Não foi possível atualizar as novidades pelo servidor:", erro);
+    if (!maptorkAtualizacoesInicio.length && cache.length) {
+      maptorkAtualizacoesInicio = cache;
+      maptorkAtualizacaoIndice = 0;
+    }
     renderizarAtualizacaoInicioAtual();
     renderizarAtualizacaoAdmin();
     iniciarRotacaoAtualizacoes();
