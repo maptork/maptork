@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>MAPTORK - Imagem de valores</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;background:#0d1014;color:#fff;font-family:Arial,Helvetica,sans-serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:9px;padding:10px;background:#11151a;border-bottom:1px solid #2c323a}.toolbar button,.toolbar a{display:flex;align-items:center;justify-content:center;height:42px;flex:1;border-radius:9px;font-size:12px;font-weight:800;text-decoration:none;border:1px solid #343b45;color:#fff;background:#20262d}.toolbar .primary{background:#176b43;border-color:#248b5a}.wrap{padding:14px}.preview{display:block;width:min(100%,760px);height:auto;margin:0 auto;border-radius:8px;background:#fff}.msg{text-align:center;color:#aeb6c0;font-size:12px;margin:10px 0}.erro{padding:30px;text-align:center;color:#ff9299}
+*{box-sizing:border-box}html,body{margin:0;background:#f3f5f8;color:#273249;font-family:Arial,Helvetica,sans-serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:9px;justify-content:center;padding:10px;background:#ffffff;border-bottom:1px solid #dbe2ea;box-shadow:0 4px 14px rgba(35,43,53,.05)}.toolbar button,.toolbar a{display:flex;align-items:center;justify-content:center;height:42px;flex:1;border-radius:11px;font-size:12px;font-weight:800;text-decoration:none;border:1px solid #d6dce5;color:#273249;background:#f6f8fb}.toolbar .primary{flex:0 1 220px;max-width:220px;width:220px;background:linear-gradient(180deg,#52c4f7,#2ea7ea);border-color:#71cdf5;color:#fff;box-shadow:0 8px 18px rgba(46,167,234,.22)}.toolbar .primary:hover{filter:brightness(1.04)}.toolbar .page-corner-close{position:absolute;right:10px;top:10px;width:42px;flex:none;padding:0;border:0;border-radius:50%;background:transparent;font-size:32px;line-height:1;font-weight:300;color:#4f5d70}.toolbar .page-corner-close:hover{background:#eef4f8}.wrap{padding:14px}.preview{display:block;width:min(100%,760px);height:auto;margin:0 auto;border-radius:8px;background:#fff;box-shadow:0 5px 25px rgba(0,0,0,.08)}.msg{text-align:center;color:#667487;font-size:12px;margin:10px 0}.erro{padding:30px;text-align:center;color:#d6424f}
+
+@media(max-width:600px){.toolbar .primary{flex:0 1 180px;max-width:180px;width:180px}}
 </style>
 </head>
 <body>
-<div class="toolbar"><button onclick="voltarPagina()">Voltar</button><button id="download" class="primary" type="button">Salvar PNG</button></div>
+<div class="toolbar"><button class="page-corner-close" onclick="voltarPagina()" aria-label="Fechar">×</button><button id="download" class="primary" type="button">Salvar PNG</button></div>
 <div class="wrap"><div class="msg">A imagem está pronta. Toque em <b>Salvar PNG</b> para guardar no dispositivo.</div><img id="preview" class="preview" alt="Orçamento MAPTORK"></div>
 <script>
 function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
@@ -24,7 +26,7 @@ function gerar(d){
  x.fillStyle='#161616';x.font='700 42px Arial';x.fillText(d.loja||'Orçamento',M,top);
  x.fillStyle='#777';x.font='22px Arial';x.fillText('Orçamento / Serviços',M,top+40);
  x.textAlign='right';x.fillText('Data: '+(d.data||''),W-M,top+40);x.textAlign='left';
- x.fillStyle='#c9151e';x.fillRect(M,top+72,W-M*2,6);
+ x.fillStyle='#2b9fdb';x.fillRect(M,top+72,W-M*2,6);
 
  let y=top+125;
  if(temMeta){
@@ -111,12 +113,15 @@ function salvarPng(data,nome){
  a.remove();
 }
 try{
- const d=JSON.parse(decodeURIComponent(location.hash.slice(1)));
+ const raw=location.hash.slice(1);
+ if(!raw){ location.replace('index.html'); throw new Error('MAPTORK_REDIRECT_HOME'); }
+ const d=JSON.parse(decodeURIComponent(raw));
+ if(!d || !Array.isArray(d.itens) || !d.itens.length){ location.replace('index.html'); throw new Error('MAPTORK_REDIRECT_HOME'); }
  const data=gerar(d);
  document.getElementById('preview').src=data;
  const dt=new Date();
  const nome=`MAPTORK_Valores_${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}.png`;
  document.getElementById('download').addEventListener('click',()=>salvarPng(data,nome));
-}catch(e){document.querySelector('.wrap').innerHTML='<div class="erro">Não foi possível gerar a imagem. Volte e tente novamente.</div>'}
+}catch(e){if(e && e.message==='MAPTORK_REDIRECT_HOME'){}else{location.replace('index.html')}}
 </script>
 </body></html>

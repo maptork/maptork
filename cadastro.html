@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cadastro</title>
+<script>
+(function(){
+  try { localStorage.setItem("maptork_tema", "light"); } catch (e) {}
+  document.documentElement.setAttribute("data-theme", "light");
+})();
+</script>
+
 <link rel="stylesheet" href="login.css">
 </head>
 
@@ -16,62 +23,33 @@
     <h4>MAP<span>TORK</span></h4>
     <p>Crie sua conta</p>
 
-    <input type="text" id="nome" placeholder="Nome completo">
+    <input type="text" id="nome" placeholder="Nome completo" autocomplete="name" maxlength="100" required>
 
     <input type="email" id="email" placeholder="E-mail" inputmode="email" autocomplete="email" required>
 
   <div class="senha-box">
     <input type="password" id="senha" placeholder="Senha">
 
-    <span class="btn-olho" onclick="mostrarSenha('senha','iconeSenha')">
-        <svg id="iconeSenha"
-             xmlns="http://www.w3.org/2000/svg"
-             viewBox="0 0 24 24"
-             fill="none"
-             stroke="currentColor"
-             stroke-width="2"
-             stroke-linecap="round"
-             stroke-linejoin="round">
-
-            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-            <circle cx="12" cy="12" r="3"/>
-
-        </svg>
-    </span>
 </div>
 
 <div class="senha-box">
     <input type="password" id="confirmarSenha" placeholder="Confirmar senha">
 
-    <span class="btn-olho" onclick="mostrarSenha('confirmarSenha','iconeConfirmar')">
-        <svg id="iconeConfirmar"
-             xmlns="http://www.w3.org/2000/svg"
-             viewBox="0 0 24 24"
-             fill="none"
-             stroke="currentColor"
-             stroke-width="2"
-             stroke-linecap="round"
-             stroke-linejoin="round">
-
-            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-            <circle cx="12" cy="12" r="3"/>
-
-        </svg>
-    </span>
 </div>
 
 <button onclick="cadastrar()">
     CADASTRAR
 </button>
 
+<button class="cadastro-btn" type="button" onclick="window.location.href='login.html'">
+    JÁ TENHO CONTA
+</button>
 
 <div id="mensagem" class="mensagem"></div>
 
 
 
-    <button class="cadastro-btn" onclick="window.location.href='login.html'">
-        VOLTAR
-    </button>
+    <button class="auth-corner-close" type="button" onclick="window.location.href='index.html'" aria-label="Fechar">×</button>
 
 </div>
 

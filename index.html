@@ -12,15 +12,14 @@
 
 <title>MAPTORK</title>
 
-<link rel="stylesheet" href="style.css">
+<script>
+(function(){
+  try { localStorage.setItem("maptork_tema", "light"); } catch (e) {}
+  document.documentElement.setAttribute("data-theme", "light");
+})();
+</script>
 
-<style>
-
-html.auth-pendente body {
-  visibility: hidden;
-}
-
-</style>
+<link rel="stylesheet" href="style.css?v=20260909-v92-loja-gap-preco">
 
 
 <script>
@@ -30,262 +29,109 @@ html.auth-pendente body {
 // ======================================================
 
 const AUTH_API =
-"https://script.google.com/macros/s/AKfycbzRX5WWEj0_cD3ERlixKXqB_feiUKzqnExED5KiKYH7VOTvt_tjoqEuTC60iq5cp3Ra/exec";
-
-
-document.documentElement.classList.add(
-  "auth-pendente"
-);
+"https://script.google.com/macros/s/AKfycbzQyy2VRlJR_NZEoeMXNaLkhbdz3RL47EabYDLrRhFnOEmY-0k8g3YliBWXK99LaH7j/exec";
 
 
 // ======================================================
-// VERIFICAR SESSÃO
+// ACESSO PÚBLICO + SESSÃO OPCIONAL
 // ======================================================
+
+function definirUsuarioVisitante() {
+  window.usuarioAtual = {
+    nome: "Visitante",
+    email: "",
+    admin: false,
+    visitante: true
+  };
+}
+
+function limparSessaoUsuario() {
+  ["token", "nome", "email"].forEach(function(chave) {
+    try { localStorage.removeItem(chave); } catch (e) {}
+  });
+}
+
+function atualizarUsuarioTelaPublica() {
+  const usuario = window.usuarioAtual || { nome: "Visitante", email: "", admin: false, visitante: true };
+  const visitante = usuario.visitante === true || !String(usuario.email || "").trim();
+  const nome = visitante ? "Visitante" : (usuario.nome || "Usuário");
+
+  const usuarioNome = document.getElementById("usuarioNome");
+  const contaNome = document.getElementById("contaNome");
+  const contaEmail = document.getElementById("contaEmail");
+  const adminMenuBtn = document.getElementById("adminMenuBtn");
+
+  if (usuarioNome) usuarioNome.textContent = visitante ? "Visitante" : ("Bem-vindo, " + nome);
+  if (contaNome) contaNome.textContent = nome;
+  if (contaEmail) contaEmail.textContent = visitante ? "Crie sua conta para acessar o perfil" : (usuario.email || "");
+  if (adminMenuBtn) adminMenuBtn.style.display = usuario.admin === true ? "flex" : "none";
+}
+
+function agendarAtualizacaoUsuarioTela() {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", atualizarUsuarioTelaPublica, { once: true });
+  } else {
+    atualizarUsuarioTelaPublica();
+  }
+}
 
 async function verificarSessao() {
+  const token = String(localStorage.getItem("token") || "").trim();
 
-  const token =
-    localStorage.getItem(
-      "token"
-    );
-
-
+  // Sem login: o site continua aberto normalmente como visitante.
   if (!token) {
-
-    window.location.replace(
-      "login.html"
-    );
-
+    limparSessaoUsuario();
+    definirUsuarioVisitante();
+    agendarAtualizacaoUsuarioTela();
     return;
   }
 
-
   try {
+    const resposta = await fetch(
+      AUTH_API +
+      "?action=verificarToken" +
+      "&token=" + encodeURIComponent(token) +
+      "&_t=" + Date.now(),
+      { cache: "no-store" }
+    );
 
-    const resposta =
-      await fetch(
-
-        AUTH_API +
-
-        "?action=verificarToken" +
-
-        "&token=" +
-        encodeURIComponent(
-          token
-        ) +
-
-        "&_t=" +
-        Date.now(),
-
-        {
-          cache: "no-store"
-        }
-
-      );
-
-
-    const dados =
-      await resposta.json();
-
+    const dados = await resposta.json();
 
     if (!dados.ok) {
+      const mensagemSessao = String(dados.mensagem || "");
+      const sessaoRealmenteInvalida = /sessão inválida|sessão expirada|conta bloqueada/i.test(mensagemSessao);
+      if (!sessaoRealmenteInvalida) throw new Error(mensagemSessao || "Falha temporária ao validar a sessão.");
 
-      localStorage.removeItem(
-        "token"
-      );
-
-      localStorage.removeItem(
-        "nome"
-      );
-
-      localStorage.removeItem(
-        "email"
-      );
-
-
-      window.location.replace(
-        "login.html"
-      );
-
+      limparSessaoUsuario();
+      definirUsuarioVisitante();
+      agendarAtualizacaoUsuarioTela();
       return;
     }
 
-
-    if (dados.nome) {
-
-      localStorage.setItem(
-        "nome",
-        dados.nome
-      );
-
-    }
-
-
-    if (dados.email) {
-
-      localStorage.setItem(
-        "email",
-        dados.email
-      );
-
-    }
-
+    if (dados.nome) localStorage.setItem("nome", dados.nome);
+    if (dados.email) localStorage.setItem("email", dados.email);
 
     window.usuarioAtual = {
-
-      nome:
-        dados.nome ||
-        localStorage.getItem(
-          "nome"
-        ) ||
-        "",
-
-      email:
-        dados.email ||
-        localStorage.getItem(
-          "email"
-        ) ||
-        "",
-
-      admin:
-        dados.admin === true
-
+      nome: dados.nome || localStorage.getItem("nome") || "Usuário",
+      email: dados.email || localStorage.getItem("email") || "",
+      admin: dados.admin === true,
+      visitante: false
     };
 
-
-    function atualizarUsuarioTela() {
-
-      const nome =
-        window.usuarioAtual.nome ||
-        "Usuário";
-
-
-      const usuarioNome =
-        document.getElementById(
-          "usuarioNome"
-        );
-
-
-      const contaNome =
-        document.getElementById(
-          "contaNome"
-        );
-
-
-      const contaEmail =
-        document.getElementById(
-          "contaEmail"
-        );
-
-
-      const adminMenuBtn =
-        document.getElementById(
-          "adminMenuBtn"
-        );
-
-
-      if (usuarioNome) {
-
-        usuarioNome.textContent =
-          "Bem-vindo, " +
-          nome;
-
-      }
-
-
-      if (contaNome) {
-
-        contaNome.textContent =
-          nome;
-
-      }
-
-
-      if (contaEmail) {
-
-        contaEmail.textContent =
-          window.usuarioAtual.email ||
-          "";
-
-      }
-
-
-      if (adminMenuBtn) {
-
-        adminMenuBtn.style.display =
-
-          window.usuarioAtual.admin
-
-            ? "flex"
-
-            : "none";
-
-      }
-
-    }
-
-
-    if (
-      document.readyState ===
-      "loading"
-    ) {
-
-      document.addEventListener(
-
-        "DOMContentLoaded",
-
-        atualizarUsuarioTela,
-
-        {
-          once: true
-        }
-
-      );
-
-    }
-
-    else {
-
-      atualizarUsuarioTela();
-
-    }
-
-
-    document
-      .documentElement
-      .classList
-      .remove(
-        "auth-pendente"
-      );
-
+    agendarAtualizacaoUsuarioTela();
 
   } catch (erro) {
+    console.error("Erro ao verificar sessão:", erro);
 
-    console.error(
-      "Erro ao verificar sessão:",
-      erro
-    );
-
-
-    localStorage.removeItem(
-      "token"
-    );
-
-    localStorage.removeItem(
-      "nome"
-    );
-
-    localStorage.removeItem(
-      "email"
-    );
-
-
-    window.location.replace(
-      "login.html"
-    );
-
+    // Em falha de rede, mantém a sessão local existente.
+    window.usuarioAtual = {
+      nome: localStorage.getItem("nome") || "Usuário",
+      email: localStorage.getItem("email") || "",
+      admin: String(localStorage.getItem("email") || "").toLowerCase() === "maptork@gmail.com",
+      visitante: false
+    };
+    agendarAtualizacaoUsuarioTela();
   }
-
 }
 
 
@@ -294,83 +140,22 @@ async function verificarSessao() {
 // ======================================================
 
 async function sair() {
-
-  const token =
-    localStorage.getItem(
-      "token"
-    );
-
+  const token = String(localStorage.getItem("token") || "").trim();
 
   try {
-
     if (token) {
-
-      const form =
-        new FormData();
-
-
-      form.append(
-        "action",
-        "logout"
-      );
-
-
-      form.append(
-        "token",
-        token
-      );
-
-
-      await fetch(
-
-        AUTH_API,
-
-        {
-          method: "POST",
-          body: form
-        }
-
-      );
-
+      const form = new FormData();
+      form.append("action", "logout");
+      form.append("token", token);
+      await fetch(AUTH_API, { method: "POST", body: form });
     }
-
   } catch (erro) {
-
-    console.error(
-      "Erro no logout:",
-      erro
-    );
-
+    console.error("Erro no logout:", erro);
   } finally {
-
-    localStorage.clear();
-
-
-    window.location.replace(
-      "login.html"
-    );
-
+    limparSessaoUsuario();
+    window.location.replace("index.html");
   }
-
 }
-
-
-// ======================================================
-// SAIR DO APLICATIVO
-// Fecha somente o app Android e mantém a conta conectada.
-// ======================================================
-function sairDoAplicativo() {
- try {
-  if (window.AndroidApp && typeof window.AndroidApp.closeApp === "function") {
-   window.AndroidApp.closeApp();
-   return;
-  }
- } catch (erro) {
-  console.error("Erro ao fechar aplicativo:", erro);
- }
- try { window.close(); } catch (erro) {}
-}
-
 
 verificarSessao();
 
@@ -410,19 +195,13 @@ verificarSessao();
 </button>
 
 
+
+
 <button
   onclick="showPage('manuais',this)"
 >
   <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h8" stroke-width="1.8" stroke-linejoin="round"/></svg></span><span>Manuais</span>
 </button>
-
-
-<button
-  onclick="showPage('assinaturas',this)"
->
-  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9z" stroke-width="1.8" stroke-linejoin="round"/></svg></span><span>Assinaturas</span>
-</button>
-
 
 <button
   onclick="showPage('esquemas',this)"
@@ -430,18 +209,24 @@ verificarSessao();
   <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a4.2 4.2 0 0 0-5.5 5.5L4 17v3h3l5.2-5.2a4.2 4.2 0 0 0 5.5-5.5l-2.4 2.4-3-3z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Ferramentas</span>
 </button>
 
+<button
+  id="lojaMenuBtn"
+  onclick="showPage('loja',this)"
+>
+  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 8h14l-1 12H6L5 8Z" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 9V6a4 4 0 0 1 8 0v3" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8h16" stroke-width="1.8" stroke-linecap="round"/></svg></span><span>Loja</span>
+</button>
 
 <button
-  onclick="showPage('suporte',this)"
+  onclick="showPage('comunidade',this)"
 >
-  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13v-2a8 8 0 0 1 16 0v2M4 13h3v6H5a1 1 0 0 1-1-1zM20 13h-3v6h2a1 1 0 0 0 1-1zM17 19c0 2-2 2-5 2" stroke-width="1.8" stroke-linecap="round"/></svg></span><span>Suporte</span>
+  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 21c.5-4.3 2.5-6.5 5.5-6.5s5 2.2 5.5 6.5M13 21c.35-3.2 1.8-4.8 4.3-4.8 2.4 0 3.8 1.6 4.2 4.8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Comunidade</span>
 </button>
 
 
 <button
   onclick="showPage('conta',this)"
 >
-  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke-width="1.8"/><path d="M4 21c.7-4.2 3.3-6.3 8-6.3s7.3 2.1 8 6.3" stroke-width="1.8" stroke-linecap="round"/></svg></span><span>Conta</span>
+  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke-width="1.8"/><path d="M4 21c.7-4.2 3.3-6.3 8-6.3s7.3 2.1 8 6.3" stroke-width="1.8" stroke-linecap="round"/></svg></span><span>Perfil</span>
 </button>
 
 
@@ -450,7 +235,7 @@ verificarSessao();
   style="display:none"
   onclick="abrirAdmin(this)"
 >
-  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span>Admin</span>
+  <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span>Administrador</span>
 </button>
 
 
@@ -488,12 +273,7 @@ verificarSessao();
   id="planoTopoBtn"
   class="plano-topo-btn sem-plano"
   type="button"
-  onclick="
-    showPage(
-      'assinaturas',
-      document.querySelectorAll('.nav button')[2]
-    )
-  "
+  onclick="abrirAssinaturasOuCadastro()"
 >
 
   SEM PLANO
@@ -514,6 +294,27 @@ verificarSessao();
   class="page"
 >
 
+
+<div class="trace-highlight-section">
+  <div class="trace-highlight-head">
+    <h2>Início</h2>
+    <div class="trace-highlight-bars"><span></span><span></span></div>
+    <p>Acesso rápido aos recursos do MAPTORK</p>
+  </div>
+
+  <div class="trace-premium-card" id="ofertaPlanoInicio">
+    <div class="trace-premium-copy">
+      <div class="trace-premium-top">
+        <span class="trace-premium-pill" id="ofertaPlanoStatus">SEM PLANO</span>
+        <h3 id="ofertaPlanoTitulo">Plano Mensal</h3>
+      </div>
+      <strong id="ofertaPlanoChamada">Comece com 1 mês de acesso completo</strong>
+      <p id="ofertaPlanoDescricao">Manuais, ferramentas e conteúdo premium do MAPTORK.</p>
+    </div>
+
+    <button class="trace-premium-btn" id="ofertaPlanoBotao" type="button" onclick="abrirPlanoOferecidoInicio()">Ver plano</button>
+  </div>
+</div>
 
 <div class="hero">
 
@@ -590,6 +391,32 @@ conteúdo técnico em um só lugar.
 
 </div>
 
+
+<!-- ================================================== -->
+<!-- NOVOS POSTS DA COMUNIDADE -->
+<!-- ================================================== -->
+<div class="section inicio-novos-posts-section">
+  <h2>Novos Posts</h2>
+  <div id="inicioNovosPosts" class="inicio-novos-posts-lista">
+    <div class="inicio-novos-posts-loading">Carregando novos posts...</div>
+  </div>
+</div>
+
+<!-- ================================================== -->
+<!-- NOVIDADES DA LOJA - 2 PRODUTOS POR PÁGINA -->
+<!-- ================================================== -->
+<div class="section inicio-loja-section" id="inicioLojaSection" style="display:none">
+  <div class="inicio-loja-heading">
+    <h2>Novidades da Loja</h2>
+    <button type="button" onclick="abrirLojaPeloInicio()">Ver loja</button>
+  </div>
+  <div class="inicio-loja-carousel" id="inicioLojaCarousel">
+    <div class="inicio-loja-viewport">
+      <div id="inicioLojaTrack" class="inicio-loja-track"></div>
+    </div>
+    <div id="inicioLojaDots" class="inicio-loja-dots" aria-label="Navegação das novidades da loja"></div>
+  </div>
+</div>
 
 
 <div class="section">
@@ -836,12 +663,61 @@ conteúdo técnico em um só lugar.
 <!-- MANUAIS -->
 <!-- ================================================== -->
 
+
+
+<!-- ================================================== -->
+<!-- COMUNIDADE -->
+<!-- ================================================== -->
+<section id="comunidade" class="page" style="display:none" data-view="list">
+  <div id="comunidadeListaView">
+    <div class="trace-highlight-head comunidade-page-head">
+      <div class="comunidade-head-top">
+        <h2>Comunidade</h2>
+        <div class="comunidade-head-actions">
+          <button type="button" class="comunidade-top-action-btn comunidade-publicar-top-btn" onclick="abrirCriarPostComunidade()">+ Publicar</button>
+          <button type="button" class="comunidade-top-action-btn comunidade-meus-posts-btn" onclick="abrirMeusPostsComunidade()">Meus Posts</button>
+        </div>
+      </div>
+      <div class="trace-highlight-bars"><span></span><span></span></div>
+      <p>Veja as publicações da comunidade MAPTORK, curta e comente.</p>
+    </div>
+
+    <div id="comunidadeMensagem" class="diagnostic-result" style="display:none"></div>
+    <div id="comunidadeGrid" class="comunidade-grid">
+      <div class="comunidade-loading">Carregando comunidade...</div>
+    </div>
+  </div>
+
+  <div id="comunidadeDetalheView" class="comunidade-detalhe-view" style="display:none">
+    <button type="button" class="corner-close-btn" onclick="fecharPerfilComunidade()" aria-label="Fechar">×</button>
+    <div class="comunidade-detalhe-card card">
+      <div class="comunidade-detalhe-topo">
+        <div id="comunidadeDetalheAvatar" class="comunidade-detalhe-avatar"><span>M</span></div>
+        <div>
+          <h2 id="comunidadeDetalheTitulo">Perfil</h2>
+          <p id="comunidadeDetalheDescricao"></p>
+        </div>
+        <button id="comunidadeWhatsappBtn" type="button" class="comunidade-whatsapp-btn" style="display:none">WHATSAPP PARA CONTATO</button>
+      </div>
+      <div id="comunidadeDetalheFotos" class="comunidade-fotos-grid"></div>
+    </div>
+  </div>
+
+</section>
+
+
 <section
   id="manuais"
   class="page"
   style="display:none"
 >
 
+
+  <div class="trace-highlight-head">
+    <h2>Manuais</h2>
+    <div class="trace-highlight-bars"><span></span><span></span></div>
+    <p>Biblioteca técnica e pesquisa de PDFs</p>
+  </div>
 
   <!-- ================================================== -->
   <!-- CAIXA SOMENTE DA BUSCA -->
@@ -851,11 +727,21 @@ conteúdo técnico em um só lugar.
 
     <div class="field">
 
-      <img
-        src="img/caixa-01.png"
-        class="logo"
-        alt=""
-      >
+      <div class="manual-slider" aria-label="Galeria de imagens da aba Manuais">
+        <div class="manual-slider-track">
+          <img src="imgabamanual/prova-social-02.webp" class="manual-slide active" alt="Imagem da aba Manuais 1" loading="eager" decoding="async">
+          <img src="imgabamanual/prova-social-03.webp" class="manual-slide" alt="Imagem da aba Manuais 2" loading="lazy" decoding="async">
+          <img src="imgabamanual/prova-social-04.webp" class="manual-slide" alt="Imagem da aba Manuais 3" loading="lazy" decoding="async">
+          <img src="imgabamanual/prova-social-13.webp" class="manual-slide" alt="Imagem da aba Manuais 4" loading="lazy" decoding="async">
+          <img src="imgabamanual/prova-social-14.webp" class="manual-slide" alt="Imagem da aba Manuais 5" loading="lazy" decoding="async">
+          <img src="imgabamanual/prova-social-15.webp" class="manual-slide" alt="Imagem da aba Manuais 6" loading="lazy" decoding="async">
+          <img src="imgabamanual/prova-social-16.webp" class="manual-slide" alt="Imagem da aba Manuais 7" loading="lazy" decoding="async">
+          <img src="imgabamanual/prova-social-17.webp" class="manual-slide" alt="Imagem da aba Manuais 8" loading="lazy" decoding="async">
+        </div>
+        <div class="manual-slider-dots" aria-hidden="true">
+          <span class="active"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
 
 
       <label for="driveSearch">
@@ -869,6 +755,7 @@ conteúdo técnico em um só lugar.
         <p>
           Buscar manual no Google Drive
         </p>
+        <small class="manual-access-hint">A busca é liberada para todos. Para abrir o PDF, é necessário cadastro e assinatura ativa.</small>
 
       </label>
 
@@ -940,314 +827,58 @@ conteúdo técnico em um só lugar.
   style="display:none"
 >
 
-
-<div class="assinatura-header">
-
-
-<h1>
-
-  Escolha seu plano
-
-</h1>
-
-
-<p>
-
-Tenha acesso completo à biblioteca de manuais,
-diagramas, catálogos e materiais técnicos.
-
-</p>
-
-
-</div>
-
-
-
-<div
-  id="pagamentoMensagem"
-  class="diagnostic-result"
-  style="display:none;margin-bottom:18px"
->
-</div>
-
-
-
-<div class="planos-grid">
-
-
-
-<!-- MENSAL -->
-
-<div class="card plano-card">
-
-
-<div class="plano-periodo">
-
-  1 mês de acesso
-
-</div>
-
-
-<h2>
-
-  Plano Mensal
-
-</h2>
-
-
-<p>
-
-Acesso completo com cobrança mensal.
-
-</p>
-
-
-<div class="plano-preco">
-
-
-<strong id="precoMensal">
-
-  R$ 39,90
-
-</strong>
-
-
-<span>
-
-  por mês
-
-</span>
-
-
-</div>
-
-
-<ul class="plano-beneficios">
-
-<li>Biblioteca completa de manuais</li>
-
-<li>Atualizações frequentes</li>
-
-<li>Downloads ilimitados</li>
-
-<li>Pesquisa inteligente</li>
-
-<li>Favoritos e histórico</li>
-
-<li>Suporte prioritário</li>
-
-</ul>
-
-
-<button
-  class="cta plano-btn"
-  type="button"
-  onclick="escolherPlano('mensal')"
->
-
-  ESCOLHER PLANO
-
-</button>
-
-
-</div>
-
-
-
-<!-- TRIMESTRAL -->
-
-<div class="card plano-card">
-
-
-<div class="plano-selo">
-
-  Mais escolhido
-
-</div>
-
-
-<div class="plano-periodo">
-
-  3 meses de acesso
-
-</div>
-
-
-<h2>
-
-  Plano Trimestral
-
-</h2>
-
-
-<p>
-
-Economize escolhendo três meses de acesso.
-
-</p>
-
-
-<div class="plano-preco">
-
-
-<strong id="precoTrimestral">
-
-  R$ 89,90
-
-</strong>
-
-
-<span>
-
-  a cada 3 meses
-
-</span>
-
-
-</div>
-
-
-<ul class="plano-beneficios">
-
-<li>Biblioteca completa de manuais</li>
-
-<li>Atualizações frequentes</li>
-
-<li>Downloads ilimitados</li>
-
-<li>Pesquisa inteligente</li>
-
-<li>Favoritos e histórico</li>
-
-<li>Suporte prioritário</li>
-
-</ul>
-
-
-<button
-  class="cta plano-btn"
-  type="button"
-  onclick="escolherPlano('trimestral')"
->
-
-  ESCOLHER PLANO
-
-</button>
-
-
-</div>
-
-
-
-<!-- ANUAL -->
-
-<div class="card plano-card">
-
-
-<div class="plano-selo economia">
-
-  Maior economia
-
-</div>
-
-
-<div class="plano-periodo">
-
-  1 ano de acesso
-
-</div>
-
-
-<h2>
-
-  Plano Anual
-
-</h2>
-
-
-<p>
-
-O melhor custo-benefício para acesso contínuo.
-
-</p>
-
-
-<div class="plano-preco">
-
-
-<strong id="precoAnual">
-
-  R$ 297,00
-
-</strong>
-
-
-<span>
-
-  por ano
-
-</span>
-
-
-</div>
-
-
-<ul class="plano-beneficios">
-
-<li>Biblioteca completa de manuais</li>
-
-<li>Atualizações frequentes</li>
-
-<li>Downloads ilimitados</li>
-
-<li>Pesquisa inteligente</li>
-
-<li>Favoritos e histórico</li>
-
-<li>Suporte prioritário</li>
-
-</ul>
-
-
-<button
-  class="cta plano-btn"
-  type="button"
-  onclick="escolherPlano('anual')"
->
-
-  ESCOLHER PLANO
-
-</button>
-
-
-</div>
-
-
-</div>
-
-
-
-<div class="card pagamento-seguro">
-
-
-<h3>
-
-  🔒 Pagamento seguro pela InfinitePay
-
-</h3>
-
-
-<p>
-
-Após a confirmação do pagamento, sua assinatura
-será atualizada automaticamente e o acesso aos
-manuais será liberado.
-
-</p>
-
-
-</div>
-
+  <div class="premium-plan-shell premium-plan-page" data-premium-context="pagina">
+    <button type="button" class="premium-plan-close" onclick="voltarDosPlanos()" aria-label="Voltar">×</button>
+
+    <div class="premium-plan-head">
+      <div class="premium-plan-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18V6l5 5 3-6 3 6 5-5v12"/>
+          <path d="M7 18h10"/>
+          <circle cx="12" cy="15" r="1.6"/>
+        </svg>
+      </div>
+      <h1>Escolha seu plano</h1>
+      <p>Tenha acesso completo à biblioteca de manuais, diagramas, catálogos e materiais técnicos.</p>
+    </div>
+
+    <div id="pagamentoMensagem" class="diagnostic-result premium-payment-message" style="display:none"></div>
+
+    <div class="premium-benefits" aria-label="Benefícios da assinatura">
+      <div class="premium-benefit"><span class="premium-benefit-icon">⌕</span><span><strong>Biblioteca completa de manuais</strong><small>Acesse toda a biblioteca MAPTORK.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">↻</span><span><strong>Atualizações frequentes</strong><small>Novos materiais e melhorias constantes.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">↓</span><span><strong>Downloads ilimitados</strong><small>Baixe os materiais disponíveis sem limite.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">⌕</span><span><strong>Pesquisa inteligente</strong><small>Encontre manuais e conteúdos com rapidez.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">☆</span><span><strong>Favoritos e histórico</strong><small>Organize e encontre novamente o que acessou.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">◉</span><span><strong>Suporte prioritário</strong><small>Atendimento prioritário para assinantes.</small></span></div>
+    </div>
+
+    <div class="premium-plan-options" role="radiogroup" aria-label="Planos MAPTORK">
+      <button type="button" class="premium-plan-option" data-premium-plan="mensal" data-premium-context="pagina" onclick="selecionarPlanoPremium('mensal','pagina')">
+        <span class="premium-plan-copy"><strong>Plano Mensal</strong><small>1 mês de acesso</small></span>
+        <span class="premium-plan-price"><b id="precoMensal">R$ 39,90</b><small>por mês</small></span>
+      </button>
+
+      <button type="button" class="premium-plan-option selected" data-premium-plan="trimestral" data-premium-context="pagina" onclick="selecionarPlanoPremium('trimestral','pagina')">
+        <span class="premium-plan-copy"><strong>Plano Trimestral</strong><small>3 meses de acesso</small></span>
+        <span class="premium-plan-price"><b id="precoTrimestral">R$ 89,90</b><small>a cada 3 meses</small></span>
+        <span class="premium-plan-badge">Mais escolhido</span>
+      </button>
+
+      <button type="button" class="premium-plan-option" data-premium-plan="anual" data-premium-context="pagina" onclick="selecionarPlanoPremium('anual','pagina')">
+        <span class="premium-plan-copy"><strong>Plano Anual</strong><small>1 ano de acesso</small></span>
+        <span class="premium-plan-price"><b id="precoAnual">R$ 297,00</b><small>por ano</small></span>
+        <span class="premium-plan-badge economy">Maior economia</span>
+      </button>
+    </div>
+
+    <button type="button" id="premiumAssinarPagina" class="premium-subscribe-btn plano-btn" data-plano="trimestral" onclick="assinarPlanoPremium('pagina')">ASSINAR</button>
+
+    <div class="card pagamento-seguro premium-payment-security">
+      <h3>Pagamento seguro</h3>
+      <p>O pagamento é processado pela InfinitePay. Após a confirmação, seu acesso é atualizado automaticamente.</p>
+    </div>
+  </div>
 
 </section>
 
@@ -1267,17 +898,10 @@ manuais será liberado.
   style="display:none"
 >
 
-  <div class="assinatura-header">
-
-    <h1>
-      Ferramentas
-    </h1>
-
-    <p>
-      Ferramentas técnicas exclusivas para usuários
-      com assinatura ativa.
-    </p>
-
+  <div class="trace-highlight-head">
+    <h2>Ferramentas</h2>
+    <div class="trace-highlight-bars"><span></span><span></span></div>
+    <p>Veja as ferramentas disponíveis. Para acessar, é necessário cadastro e assinatura ativa.</p>
   </div>
 
 
@@ -1293,7 +917,7 @@ manuais será liberado.
   <div id="ferramentasDinamicasBloco" class="ferramentas-dinamicas-bloco" style="display:none">
     <div class="ferramentas-dinamicas-topo">
       <h2>Novas ferramentas</h2>
-      <span>Exclusivo para assinantes</span>
+      <span>Acesso para assinantes</span>
     </div>
     <div class="grid" id="ferramentasDinamicasGrid"></div>
   </div>
@@ -1302,12 +926,12 @@ manuais será liberado.
 
   <!-- CALCULADORA DE VALORES -->
   <div id="calculadoraValores" class="valores-calculadora" style="display:none">
+    <button class="corner-close-btn" type="button" onclick="fecharCalculadoraValores()" aria-label="Fechar">×</button>
     <div class="valores-calculadora-topo">
       <div>
         <h3>Calculadora de Valores</h3>
         <p>Informe a descrição e o valor de cada item.</p>
       </div>
-      <button class="valores-fechar" type="button" onclick="fecharCalculadoraValores()" aria-label="Voltar">×</button>
     </div>
 
     <div class="valores-dados">
@@ -1364,7 +988,6 @@ manuais será liberado.
       <button class="valores-imagem" type="button" onclick="salvarCalculadoraValoresImagem()">Salvar imagem</button>
       <button class="valores-pdf" type="button" onclick="imprimirCalculadoraValores()">Imprimir / PDF</button>
       <button class="valores-limpar" type="button" onclick="limparCalculadoraValores()">Limpar</button>
-      <button class="valores-voltar" type="button" onclick="fecharCalculadoraValores()">Voltar</button>
     </div>
   </div>
 
@@ -1372,12 +995,12 @@ manuais será liberado.
 
   <!-- CALCULADORA DE PASTILHA DE VÁLVULA -->
   <div id="calculadoraPastilha" class="pastilha-calculadora" style="display:none">
+    <button class="corner-close-btn" type="button" onclick="fecharCalculadoraPastilha()" aria-label="Fechar">×</button>
     <div class="pastilha-calculadora-topo">
       <div>
         <h3>Calculadora de Pastilha de Válvula</h3>
         <p>Informe os valores em mm. O resultado é a nova pastilha.</p>
       </div>
-      <button class="pastilha-fechar" type="button" onclick="fecharCalculadoraPastilha()" aria-label="Voltar">×</button>
     </div>
 
     <div class="pastilha-formula">Folga medida + pastilha atual − folga do manual = nova pastilha</div>
@@ -1415,7 +1038,6 @@ manuais será liberado.
 
     <div class="pastilha-acoes">
       <button class="pastilha-limpar" type="button" onclick="limparCalculadoraPastilha()">Limpar</button>
-      <button class="pastilha-voltar" type="button" onclick="fecharCalculadoraPastilha()">Voltar</button>
     </div>
   </div>
 
@@ -1425,7 +1047,7 @@ manuais será liberado.
     <!-- CALCULADORAS NO MESMO GRID DAS OUTRAS FERRAMENTAS -->
     <div class="valores-launcher">
         <div class="card esquema-card valores-card">
-          <div class="esquema-icone valores-card-icone">R$</div>
+          <div class="esquema-icone valores-card-icone tool-svg-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h.01M17 12h.01M9.5 12a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0-5 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           <h3>Calculadora de Valores</h3>
           <p class="muted">Adicione descrições e valores, calcule o total e gere uma versão para imprimir ou salvar em PDF.</p>
           <button
@@ -1441,7 +1063,7 @@ manuais será liberado.
 
     <div class="pastilha-launcher">
         <div class="card esquema-card pastilha-card">
-          <div class="esquema-icone pastilha-card-icone">🔧</div>
+          <div class="esquema-icone pastilha-card-icone tool-svg-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.7 6.3a4.2 4.2 0 0 0-5.5 5.5L4 17v3h3l5.2-5.2a4.2 4.2 0 0 0 5.5-5.5l-2.4 2.4-3-3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <h3>Calculadora de Pastilha</h3>
           <p class="muted">Calcule a nova pastilha pela folga medida, pastilha atual e valor do manual.</p>
           <button
@@ -1457,138 +1079,6 @@ manuais será liberado.
 
 
 
-    <!-- ============================================== -->
-    <!-- MULTÍMETRO -->
-    <!-- ============================================== -->
-
-    <div class="card esquema-card">
-
-      <div class="esquema-icone">
-        ⚡
-      </div>
-
-      <h3>
-        Multímetro
-      </h3>
-
-      <p class="muted">
-        Material técnico para medições,
-        testes elétricos e diagnóstico
-        utilizando multímetro.
-      </p>
-
-      
-
-      <button
-        class="cta esquema-btn"
-        type="button"
-        onclick="abrirEsquema('multimetro')"
-      >
-        ACESSAR ARQUIVO
-      </button>
-
-    </div>
-
-
-
-    <!-- ============================================== -->
-    <!-- PINAGEM -->
-    <!-- ============================================== -->
-
-    <div class="card esquema-card">
-
-      <div class="esquema-icone">
-        🔌
-      </div>
-
-      <h3>
-        Pinagem
-      </h3>
-
-      <p class="muted">
-        Pinagens de módulos, sensores,
-        conectores e componentes elétricos.
-      </p>
-
-
-
-      <button
-        class="cta esquema-btn"
-        type="button"
-        onclick="abrirEsquema('pinagem')"
-      >
-        ACESSAR ARQUIVO
-      </button>
-
-    </div>
-
-
-
-    <!-- ============================================== -->
-    <!-- PARÂMETROS -->
-    <!-- ============================================== -->
-
-    <div class="card esquema-card">
-
-      <div class="esquema-icone">
-        📊
-      </div>
-
-      <h3>
-        Parâmetros
-      </h3>
-
-      <p class="muted">
-        Valores e parâmetros técnicos
-        utilizados no diagnóstico
-        das motocicletas.
-      </p>
-
-    
-
-      <button
-        class="cta esquema-btn"
-        type="button"
-        onclick="abrirEsquema('parametros')"
-      >
-        ACESSAR ARQUIVO
-      </button>
-
-    </div>
-
-
-
-    <!-- ============================================== -->
-    <!-- ESTATORES -->
-    <!-- ============================================== -->
-
-    <div class="card esquema-card">
-
-      <div class="esquema-icone">
-        ⚙️
-      </div>
-
-      <h3>
-        Estatores
-      </h3>
-
-      <p class="muted">
-        Informações técnicas sobre
-        estatores, bobinas e sistemas
-        de geração elétrica.
-      </p>
-
-   
-
-      <button
-        class="cta esquema-btn"
-        type="button"
-        onclick="abrirEsquema('estatores')"
-      >
-        ACESSAR ARQUIVO
-      </button>
-
-    </div>
 
 
     <!-- Ferramentas adicionadas pelo administrador entram aqui automaticamente -->
@@ -1598,13 +1088,20 @@ manuais será liberado.
   <!-- AVISO -->
   <div class="card esquema-aviso">
 
-    <h3>
-      🔒 Conteúdo exclusivo
+    <h3 class="esquema-aviso-titulo">
+      <span class="esquema-aviso-lock" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="5" y="10" width="14" height="10" rx="2" stroke-width="1.8"/>
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M12 14v2" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </span>
+      Conteúdo exclusivo
     </h3>
 
     <p>
-      Para acessar os materiais desta área,
-      sua assinatura MAPTORK precisa estar ativa.
+      Você pode visualizar as ferramentas disponíveis. Para abrir uma ferramenta,
+      faça seu cadastro ou ative uma assinatura MAPTORK.
     </p>
 
   </div>
@@ -1640,7 +1137,7 @@ Central de atendimento e orientação para membros.
 
 
 <div class="card suporte-card">
-
+<button type="button" class="corner-close-btn" onclick="voltarSuporteParaPerfil()" aria-label="Fechar">×</button>
 
 <h3>
 
@@ -1692,274 +1189,367 @@ Entre em contato pelo WhatsApp para atendimento.
 <!-- MINHA CONTA -->
 <!-- ================================================== -->
 
+
+<!-- ================================================== -->
+<!-- LOJA -->
+<!-- ================================================== -->
+<section id="loja" class="page" style="display:none">
+  <div class="trace-highlight-head loja-page-head">
+    <h2>Loja</h2>
+    <div class="trace-highlight-bars"><span></span><span></span></div>
+    <p>Produtos, ferramentas e ofertas selecionadas para mecânicos.</p>
+  </div>
+
+  <div class="loja-aviso-parceiros" role="note" aria-label="Aviso sobre os produtos da Loja">
+    <strong>Sobre os produtos</strong>
+    <p>Os produtos destacados aqui servem para facilitar a compra de ferramentas e acessórios. Ao tocar em um produto, você será direcionado para a Shopee ou outro site parceiro. O MAPTORK não vende esses produtos e não se responsabiliza pela compra, pagamento, entrega, garantia ou atendimento do vendedor.</p>
+  </div>
+
+  <div id="lojaProdutosGrid" class="loja-produtos-grid">
+    <div class="loja-empty">Carregando produtos...</div>
+  </div>
+</section>
+
+
 <section
   id="conta"
   class="page"
   style="display:none"
 >
 
+<div class="trace-highlight-head">
+  <h2>Perfil</h2>
+  <div class="trace-highlight-bars"><span></span><span></span></div>
+  <p>Sua conta e preferências</p>
+</div>
 
-<h1>
+<div id="contaMenuPrincipal" class="conta-menu-principal">
 
-  Minha Conta
+<div class="profile-summary-card">
+  <div class="profile-avatar" id="contaAvatar">MP</div>
+  <div class="profile-summary-info">
+    <strong id="contaNome" class="profile-summary-name">Usuário</strong>
+    <small id="contaEmail" class="profile-summary-email">usuario@email.com</small>
+    <span id="contaPlanoBadge" class="profile-plan-badge plan-free"><span class="star">★</span><span id="contaPlanoTexto">GRATUITO</span></span>
+  </div>
+</div>
 
-</h1>
+<div class="conta-section-head">
+  <h3>Sua conta</h3>
+</div>
+
+<div class="card form-card conta-list-card">
+  <button type="button" class="conta-list-item" onclick="abrirContaPainel('dados')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.7-4 3-6 7-6s6.3 2 7 6M17 4l3 3M16 8l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Dados do perfil</strong>
+      <small>Atualize seu nome e sua foto.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+
+  <button type="button" class="conta-list-item" onclick="abrirMeusPostsComunidade()">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-2.2a4.8 4.8 0 0 1 4.8-4.8h6.4a4.8 4.8 0 0 1 4.8 4.8V19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M18 6h3M19.5 4.5v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Meus posts</strong>
+      <small>Crie, edite e gerencie suas publicações.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
 
 
+  <button type="button" class="conta-list-item" onclick="abrirContaPainel('planos')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 8a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="m17.5 7.5 1 1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Gerenciar plano</strong>
+      <small>Plano ativo, benefícios e renovação.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+</div>
 
-<!-- DADOS -->
+<div class="conta-section-head">
+  <h3>Aplicativo</h3>
+</div>
 
-<div class="card form-card">
+<div class="card form-card conta-list-card">
 
+  <button type="button" class="conta-list-item" onclick="abrirContaPainel('feedback')">
+      <span class="conta-list-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v6A2.5 2.5 0 0 1 16.5 15H10l-4 4v-4.5A2.5 2.5 0 0 1 5 12.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8.5v.1M12 12v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </span>
+      <span class="conta-list-copy">
+        <strong>Ajuda e feedback</strong>
+        <small>Fale com a equipe pelo WhatsApp.</small>
+      </span>
+      <span class="conta-list-arrow">›</span>
+    </button>
 
-<h3>
+  <button type="button" class="conta-list-item" onclick="abrirContaPainel('privacidade')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 6 5.5V11c0 4.2 2.6 7.9 6 9 3.4-1.1 6-4.8 6-9V5.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="14.5" r=".9" fill="currentColor"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Política de Privacidade</strong>
+      <small>Saiba como tratamos seus dados.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
 
-  Dados da conta
-
-</h3>
-
-
-<p>
-
-<strong>
-  Nome:
-</strong>
-
-<span id="contaNome">
-  Carregando...
-</span>
-
-</p>
-
-
-<p>
-
-<strong>
-  E-mail:
-</strong>
-
-<span id="contaEmail">
-  Carregando...
-</span>
-
-</p>
-
+  <button type="button" class="conta-list-item" onclick="abrirContaPainel('termos')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h6l4 4v12H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 4v4h4M10 12h4M10 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Termos de Uso</strong>
+      <small>Condições para uso do MAPTORK.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
 
 </div>
 
+<div class="conta-section-head">
+  <h3>Segurança e acesso</h3>
+</div>
 
+<div class="card form-card conta-list-card">
+  <button type="button" class="conta-list-item" onclick="abrirContaPainel('senha')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15.5" r="1" fill="currentColor"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Segurança e login</strong>
+      <small>Altere sua senha de acesso.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
 
-<!-- ALTERAR SENHA -->
+  <button type="button" class="conta-list-item danger" onclick="abrirContaPainel('excluir')">
+    <span class="conta-list-icon danger">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h8M9 7V5h6v2M7 7l.7 11a2 2 0 0 0 2 2h4.6a2 2 0 0 0 2-2L17 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v5M14 11v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Excluir conta</strong>
+      <small>Remover definitivamente sua conta.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
 
-<div
-  class="card form-card"
-  autocomplete="off"
->
+  <button type="button" class="conta-list-item" onclick="sair()">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="m14 8 4 4-4 4M18 12H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Sair da conta</strong>
+      <small>Encerrar sua sessão atual.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+</div>
 
+</div><!-- /contaMenuPrincipal -->
 
-<h3>
+<div class="conta-subpage-stage">
 
-  Alterar senha
+<!-- Dados do perfil: disponível para qualquer usuário cadastrado, mesmo sem assinatura. -->
+<div class="card form-card conta-panel conta-dados-panel" id="contaPainelDados">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Dados do perfil</h3>
+  <p>Atualize seu nome e sua foto. Estes dados podem ser alterados mesmo no plano gratuito.</p>
 
-</h3>
+  <div class="comunidade-foto-perfil-box conta-foto-seguranca">
+    <div id="comunidadeFotoPerfilPreview" class="comunidade-foto-perfil-preview"><span>FOTO</span></div>
+    <div class="conta-foto-perfil-copy">
+      <strong>Foto do perfil</strong>
+      <p>Escolha uma foto para identificar sua conta no MAPTORK.</p>
+      <div class="comunidade-foto-perfil-acoes">
+        <input id="comunidadeFotoPerfilInput" type="file" accept="image/jpeg,image/png,image/webp" onchange="selecionarFotoPerfilComunidade(this)" hidden>
+        <label for="comunidadeFotoPerfilInput" class="admin-file-picker-btn conta-foto-escolher-btn">ADICIONAR IMAGEM</label>
+        <button id="comunidadeSalvarFotoPerfilBtn" type="button" class="cta conta-foto-salvar-btn" onclick="salvarFotoPerfilConta()">SALVAR FOTO</button>
+      </div>
+      <div id="comunidadeFotoPerfilMensagem" class="diagnostic-result" style="display:none"></div>
+    </div>
+  </div>
 
+  <div class="field conta-nome-field">
+    <label for="contaEditarNome">Nome</label>
+    <input id="contaEditarNome" type="text" maxlength="80" autocomplete="name" placeholder="Seu nome">
+  </div>
+  <button id="contaSalvarNomeBtn" type="button" class="cta conta-salvar-nome-btn" onclick="salvarNomeConta()">SALVAR NOME</button>
+  <div id="contaNomeMensagem" class="diagnostic-result" style="display:none"></div>
 
-<div class="field">
+  <div class="conta-acesso-info">
+    <strong>Conta cadastrada</strong>
+    <small>Nome e foto podem ser alterados gratuitamente. Publicações, Manuais e Ferramentas exigem assinatura ativa.</small>
+  </div>
+</div>
 
+<!-- Meus posts permanece exclusivo para assinantes ativos. -->
 
-<label for="senhaAtual">
+<div class="card form-card conta-panel comunidade-editor-panel" id="contaPainelComunidade">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Meus posts</h3>
+  <p>Publique quantas vezes quiser. Edite, apague e gerencie suas publicações da Comunidade.</p>
 
-  Senha atual
+  <input type="hidden" id="comunidadePostEditandoId" value="">
 
-</label>
+  <div class="admin-tools-list-header conta-post-editor-header">
+    <h4 id="comunidadeEditorTitulo">Nova publicação</h4>
+  </div>
 
+  <div class="field">
+    <label for="comunidadeCabecalho">Cabeçalho</label>
+    <input id="comunidadeCabecalho" type="text" maxlength="60" placeholder="Ex.: Oficina do João">
+  </div>
+  <div class="field">
+    <label for="comunidadeYoutube">Vídeo do YouTube <small>(opcional)</small></label>
+    <input id="comunidadeYoutube" type="url" inputmode="url" maxlength="300" placeholder="Cole o link do vídeo do YouTube">
+  </div>
+  <div class="field">
+    <label for="comunidadeDescricao">Descrição</label>
+    <textarea id="comunidadeDescricao" rows="4" maxlength="500" placeholder="Conte um pouco sobre você, sua oficina ou seu trabalho."></textarea>
+  </div>
+  <div class="field">
+    <label for="comunidadeWhatsapp">WhatsApp <small>(opcional)</small></label>
+    <input id="comunidadeWhatsapp" type="tel" inputmode="tel" maxlength="20" placeholder="Ex.: 61999999999">
+  </div>
 
-<input
-  type="password"
-  id="senhaAtual"
-  disabled
-  name="maptork_current_password"
-  placeholder="Digite sua senha atual"
-  autocomplete="current-password"
->
+  <div class="field admin-tool-image-select-field comunidade-image-select-field">
+    <div class="comunidade-image-field-head">
+      <label class="admin-field-label" for="comunidadeFotosInput">Imagem</label>
+      <span id="comunidadeFotoContador" class="comunidade-image-count">0 / 10</span>
+    </div>
+    <input id="comunidadeFotosInput" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="selecionarFotosComunidade(this)">
+    <label for="comunidadeFotosInput" class="admin-file-picker-btn comunidade-select-btn">ADICIONAR IMAGEM</label>
+    <div class="admin-file-name comunidade-file-name">Você pode adicionar até 10 imagens por publicação.</div>
+    <div id="comunidadeFotosSelecionadas" class="comunidade-fotos-selecionadas"></div>
+    <div id="comunidadeMinhasFotos" class="comunidade-fotos-editor-grid"></div>
+  </div>
 
+  <div class="admin-tool-actions comunidade-editor-actions">
+    <button id="comunidadeSalvarBtn" type="button" class="cta admin-tool-save-btn comunidade-submit-btn" onclick="salvarPerfilComunidade()">PUBLICAR AGORA</button>
+    <button id="comunidadeLimparBtn" type="button" class="cta admin-tool-save-btn comunidade-clear-btn" onclick="prepararNovaPublicacaoComunidade()">LIMPAR</button>
+  </div>
+  <div id="comunidadeEditorMensagem" class="diagnostic-result" style="display:none"></div>
 
+  <div class="admin-tools-list-header conta-posts-list-header">
+    <div>
+      <strong>Publicações</strong>
+      <small class="admin-tools-edit-hint"><span id="comunidadeMeusPostsContador" class="conta-posts-count">0 posts</span> • Use EDITAR para alterar sua publicação.</small>
+    </div>
+    <button type="button" class="admin-tools-refresh" onclick="carregarMeusPostsComunidade(true)">ATUALIZAR</button>
+  </div>
+
+  <div id="comunidadeMeusPostsLista" class="admin-tools-list conta-meus-posts-list">
+    <div class="comunidade-loading">Carregando seus posts...</div>
+  </div>
+</div>
+
+<div class="card form-card conta-panel premium-profile-panel" id="contaPainelPlanos">
+  <div class="premium-plan-shell premium-plan-inline" data-premium-context="conta">
+    <button type="button" class="premium-plan-close" onclick="fecharPaineisConta()" aria-label="Voltar">×</button>
+
+    <div class="premium-plan-head">
+      <div class="premium-plan-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18V6l5 5 3-6 3 6 5-5v12"/>
+          <path d="M7 18h10"/>
+          <circle cx="12" cy="15" r="1.6"/>
+        </svg>
+      </div>
+      <h3>Escolha seu plano</h3>
+      <p>Tenha acesso completo à biblioteca de manuais, diagramas, catálogos e materiais técnicos.</p>
+      <div class="conta-plano-resumo">
+        <span id="contaPainelPlanoBadge" class="profile-plan-badge plan-free"><span class="star">★</span><span id="contaPainelPlanoTexto">GRATUITO</span></span>
+      </div>
+    </div>
+
+    <div class="premium-benefits premium-benefits-compact" aria-label="Benefícios da assinatura">
+      <div class="premium-benefit"><span class="premium-benefit-icon">⌕</span><span><strong>Biblioteca de manuais</strong><small>Acesse toda a biblioteca.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">↻</span><span><strong>Atualizações frequentes</strong><small>Novos materiais e melhorias constantes.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">↓</span><span><strong>Downloads sem limite</strong><small>Baixe conteúdos sem limite.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">⌕</span><span><strong>Pesquisa inteligente</strong><small>Encontre manuais e conteúdos com rapidez.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">☆</span><span><strong>Favoritos e histórico</strong><small>Organize e encontre novamente o que acessou.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">◉</span><span><strong>Suporte prioritário</strong><small>Atendimento prioritário para assinantes.</small></span></div>
+    </div>
+
+    <div class="premium-plan-options" role="radiogroup" aria-label="Planos MAPTORK">
+      <button type="button" class="premium-plan-option" data-premium-plan="mensal" data-premium-context="conta" onclick="selecionarPlanoPremium('mensal','conta')">
+        <span class="premium-plan-copy"><strong>Plano Mensal</strong><small>1 mês de acesso</small></span>
+        <span class="premium-plan-price"><b id="precoMensalConta">R$ 39,90</b><small>por mês</small></span>
+      </button>
+
+      <button type="button" class="premium-plan-option selected" data-premium-plan="trimestral" data-premium-context="conta" onclick="selecionarPlanoPremium('trimestral','conta')">
+        <span class="premium-plan-copy"><strong>Plano Trimestral</strong><small>3 meses de acesso</small></span>
+        <span class="premium-plan-price"><b id="precoTrimestralConta">R$ 89,90</b><small>a cada 3 meses</small></span>
+        <span class="premium-plan-badge">Mais escolhido</span>
+      </button>
+
+      <button type="button" class="premium-plan-option" data-premium-plan="anual" data-premium-context="conta" onclick="selecionarPlanoPremium('anual','conta')">
+        <span class="premium-plan-copy"><strong>Plano Anual</strong><small>1 ano de acesso</small></span>
+        <span class="premium-plan-price"><b id="precoAnualConta">R$ 297,00</b><small>por ano</small></span>
+        <span class="premium-plan-badge economy">Maior economia</span>
+      </button>
+    </div>
+
+    <button type="button" id="premiumAssinarConta" class="premium-subscribe-btn plano-btn" data-plano="trimestral" onclick="assinarPlanoPremium('conta')">ASSINAR</button>
+  </div>
 </div>
 
 
-
-<div class="field">
-
-
-<label for="novaSenha">
-
-  Nova senha
-
-</label>
-
-
-<input
-  type="password"
-  id="novaSenha"
-  disabled
-  name="maptork_new_password"
-  placeholder="Mínimo de 8 caracteres"
-  autocomplete="new-password"
->
-
-
+<div class="card form-card conta-panel" id="contaPainelFeedback">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Ajuda e feedback</h3>
+  <p>Escreva sua mensagem e fale diretamente com a equipe MAPTORK pelo WhatsApp.</p>
+  <div class="field">
+    <label for="contaFeedbackTexto">Mensagem</label>
+    <textarea id="contaFeedbackTexto" rows="5" maxlength="500" placeholder="Como podemos ajudar?"></textarea>
+  </div>
+  <button class="cta conta-whatsapp-btn" type="button" onclick="enviarFeedbackWhatsApp()">ENVIAR PELO WHATSAPP</button>
 </div>
 
-
-
-<div class="field">
-
-
-<label for="confirmarNovaSenha">
-
-  Confirmar nova senha
-
-</label>
-
-
-<input
-  type="password"
-  id="confirmarNovaSenha"
-  disabled
-  name="maptork_confirm_new_password"
-  placeholder="Repita a nova senha"
-  autocomplete="new-password"
->
-
-
+<div class="card form-card conta-panel" id="contaPainelPrivacidade">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Política de Privacidade</h3>
+  <p>O MAPTORK utiliza seus dados de cadastro para autenticação, liberação de acesso e comunicação sobre sua assinatura. Informações informadas por você não são vendidas a terceiros. Dados podem ser usados apenas para suporte, melhoria do serviço e gestão de acesso à plataforma.</p>
+  <p>Ao utilizar o MAPTORK, você concorda com o armazenamento das informações necessárias para funcionamento do serviço, como nome, e-mail, plano e dados de sessão.</p>
 </div>
 
-
-<button
-  class="cta"
-  id="btnAlterarSenha"
-  type="button"
-  onclick="alterarSenhaConta()"
->
-
-  ALTERAR SENHA
-
-</button>
-
-
-<div
-  id="contaMensagem"
-  class="diagnostic-result"
->
+<div class="card form-card conta-panel" id="contaPainelTermos">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Termos de Uso</h3>
+  <p>O acesso aos conteúdos premium depende de uma assinatura ativa. O usuário é responsável por manter os dados de acesso em segurança e utilizar o material do MAPTORK apenas para fins permitidos pela plataforma.</p>
+  <p>O conteúdo pode ser atualizado, reorganizado ou removido a qualquer momento para melhoria do serviço. O uso indevido da plataforma pode resultar em bloqueio de acesso.</p>
 </div>
 
-
+<div class="card form-card conta-panel" id="contaPainelSenha" autocomplete="off">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Segurança e login</h3>
+  <p>Use uma senha forte e diferente das utilizadas em outros serviços.</p>
+  <div class="seguranca-login-note"><span>✓</span><div><strong>Sessão protegida</strong><small>Sua conta permanece conectada com segurança neste aparelho.</small></div></div>
+  <div class="field"><label for="contaEditarSenhaAtual">Senha atual</label><input id="contaEditarSenhaAtual" type="password" autocomplete="current-password" placeholder="Digite sua senha atual"></div>
+  <div class="field"><label for="contaEditarNovaSenha">Nova senha</label><input id="contaEditarNovaSenha" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo de 8 caracteres"></div>
+  <div class="field"><label for="contaEditarConfirmarSenha">Confirmar nova senha</label><input id="contaEditarConfirmarSenha" type="password" autocomplete="new-password" placeholder="Repita a nova senha"></div>
+  <button id="contaSalvarDadosBtn" class="cta" type="button" onclick="salvarDadosPessoaisConta()">ATUALIZAR SENHA</button>
+  <div id="contaDadosMensagem" class="diagnostic-result" style="display:none"></div>
 </div>
 
-
-
-<!-- SAIR -->
-
-<div class="card form-card">
-
-
-<h3>
-
-  Sessão
-
-</h3>
-
-
-<button
-  class="cta"
-  type="button"
-  onclick="sair()"
->
-
-  SAIR DA CONTA
-
-</button>
-
-<button
-  class="cta"
-  type="button"
-  onclick="sairDoAplicativo()"
-  style="margin-top: 12px;"
->
-
-  SAIR DO APLICATIVO
-
-</button>
-
-
+<div class="card form-card conta-panel" id="contaPainelExcluir">
+  <button type="button" class="corner-close-btn" onclick="fecharPaineisConta()" aria-label="Fechar">×</button>
+  <h3>Excluir minha conta</h3>
+  <p>Ao excluir sua conta, seus dados de acesso e sua assinatura serão removidos do MAPTORK.</p>
+  <p><strong>Esta ação não poderá ser desfeita.</strong></p>
+  <button id="btnExcluirConta" type="button" onclick="excluirMinhaConta()" style="width:100%;padding:14px 18px;border-radius:10px;border:1px solid #273249;background:#273249;color:#ffffff;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(39,50,73,.16);">EXCLUIR MINHA CONTA</button>
+  <div id="excluirContaMensagem" class="diagnostic-result" style="display:none"></div>
 </div>
-
-
-
-<!-- ================================================== -->
-<!-- EXCLUIR CONTA -->
-<!-- ================================================== -->
-
-<div class="card form-card">
-
-
-<h3>
-
-  Excluir minha conta
-
-</h3>
-
-
-<p>
-
-Ao excluir sua conta, seus dados de acesso e sua
-assinatura serão removidos do MAPTORK.
-
-</p>
-
-
-<p>
-
-<strong>
-
-Esta ação não poderá ser desfeita.
-
-</strong>
-
-</p>
-
-
-<button
-  id="btnExcluirConta"
-  type="button"
-  onclick="excluirMinhaConta()"
-  style="
-    width:100%;
-    padding:14px 18px;
-    border-radius:10px;
-    border:1px solid #ff2b2b;
-    background:rgba(255,0,0,.08);
-    color:#ff3b3b;
-    font-weight:800;
-    cursor:pointer;
-  "
->
-
-  EXCLUIR MINHA CONTA
-
-</button>
-
-
-<div
-  id="excluirContaMensagem"
-  class="diagnostic-result"
-  style="display:none"
->
-</div>
-
-
-</div>
-
+</div><!-- /conta-subpage-stage -->
 
 </section>
 
@@ -1976,199 +1566,154 @@ Esta ação não poderá ser desfeita.
 >
 
 
-<h1>
-
-  Painel Administrativo
-
-</h1>
-
-
-<p>
-
-Gerenciamento do MAPTORK.
-
-</p>
+<div class="trace-highlight-head">
+  <h2>Painel Administrativo</h2>
+  <div class="trace-highlight-bars"><span></span><span></span></div>
+  <p>Gerenciamento do MAPTORK.</p>
+</div>
 
 
 <!-- ================================================== -->
 <!-- MENU DE CONFIGURAÇÕES DO ADMIN -->
 <!-- ================================================== -->
 
-<div id="adminConfigMenu" class="admin-config-menu card">
-  <div class="admin-config-menu-head">
-    <h3>Configurações</h3>
-    <p>Escolha o que deseja gerenciar.</p>
-  </div>
-
-  <div class="admin-config-list">
-    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('planos')">
-      <span class="admin-config-icon">R$</span>
-      <span class="admin-config-copy">
-        <strong>Valores dos Planos</strong>
-        <small>Mensal, trimestral e anual</small>
-      </span>
-      <span class="admin-config-chevron">›</span>
-    </button>
-
-    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('atualizacoes')">
-      <span class="admin-config-icon">↻</span>
-      <span class="admin-config-copy">
-        <strong>Novas Atualizações</strong>
-        <small>Imagem, título, texto e link</small>
-      </span>
-      <span class="admin-config-chevron">›</span>
-    </button>
-
-    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('ferramentas')">
-      <span class="admin-config-icon">🔧</span>
-      <span class="admin-config-copy">
-        <strong>Novas Ferramentas</strong>
-        <small>Adicionar, editar e excluir ferramentas</small>
-      </span>
-      <span class="admin-config-chevron">›</span>
-    </button>
-
-    <button type="button" class="admin-config-item" onclick="abrirConfiguracaoAdmin('usuarios')">
-      <span class="admin-config-icon">👤</span>
-      <span class="admin-config-copy">
-        <strong>Usuários Cadastrados</strong>
-        <small>Planos, bloqueio e redefinição de senha</small>
-      </span>
-      <span class="admin-config-chevron">›</span>
-    </button>
-  </div>
+<div class="conta-section-head">
+  <h3>Configurações</h3>
 </div>
 
+<div id="adminConfigMenu" class="card form-card conta-list-card admin-config-menu">
+  <button type="button" class="conta-list-item" onclick="abrirConfiguracaoAdmin('planos')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7.5A2.5 2.5 0 0 1 8.5 5h7A2.5 2.5 0 0 1 18 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 6 16.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 9.5h4M10 12h4M10 14.5h2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.5 9.5h2M17.5 9.5h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Valores dos Planos</strong>
+      <small>Mensal, trimestral e anual.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
 
+  <button type="button" class="conta-list-item" onclick="abrirConfiguracaoAdmin('atualizacoes')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.35-5.65" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Novas Atualizações</strong>
+      <small>Imagem, título, texto e link.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+
+  <button type="button" class="conta-list-item" onclick="abrirConfiguracaoAdmin('ferramentas')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.7 6.3 3 3M4 20l4.3-1 9.4-9.4a2.12 2.12 0 0 0-3-3L5.3 16 4 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8 16 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Novas Ferramentas</strong>
+      <small>Adicionar, editar e excluir ferramentas.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+
+  <button type="button" class="conta-list-item" onclick="abrirConfiguracaoAdmin('loja')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 9V6a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Loja</strong>
+      <small>Adicionar, editar e excluir produtos.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+
+  <button type="button" class="conta-list-item" onclick="abrirConfiguracaoAdmin('comunidade')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 21c.5-4.3 2.5-6.5 5.5-6.5s5 2.2 5.5 6.5M13 21c.35-3.2 1.8-4.8 4.3-4.8 2.4 0 3.8 1.6 4.2 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Comunidade</strong>
+      <small>Apagar posts e comentários ofensivos.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+
+  <button type="button" class="conta-list-item" onclick="abrirConfiguracaoAdmin('usuarios')">
+    <span class="conta-list-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 8a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="conta-list-copy">
+      <strong>Usuários Cadastrados</strong>
+      <small>Planos, bloqueio e redefinição de senha.</small>
+    </span>
+    <span class="conta-list-arrow">›</span>
+  </button>
+</div>
 
 <!-- ================================================== -->
 <!-- VALORES DOS PLANOS -->
 <!-- ================================================== -->
 
-<div id="adminConfigPlanos" class="card form-card admin-config-panel" data-admin-panel="planos">
+<div id="adminConfigPlanos" class="card form-card admin-config-panel premium-profile-panel" data-admin-panel="planos">
+  <div class="premium-plan-shell premium-plan-inline admin-plan-shell" data-premium-context="admin">
+    <button type="button" class="premium-plan-close" onclick="mostrarMenuAdmin()" aria-label="Fechar">×</button>
 
-<button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
+    <div class="premium-plan-head">
+      <div class="premium-plan-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18V6l5 5 3-6 3 6 5-5v12"/>
+          <path d="M7 18h10"/>
+          <circle cx="12" cy="15" r="1.6"/>
+        </svg>
+      </div>
+      <h3>Escolha seu plano</h3>
+      <p>Edite os valores mantendo o mesmo visual exibido para todos os usuários.</p>
+      <div class="conta-plano-resumo admin-plan-summary">
+        <span class="profile-plan-badge plan-trimestral"><span class="star">★</span><span>ADMINISTRADOR</span></span>
+      </div>
+    </div>
 
-<h3>
+    <div class="premium-benefits premium-benefits-compact" aria-label="Benefícios da assinatura">
+      <div class="premium-benefit"><span class="premium-benefit-icon">⌕</span><span><strong>Biblioteca de manuais</strong><small>Acesse toda a biblioteca.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">↻</span><span><strong>Atualizações frequentes</strong><small>Novos materiais e melhorias constantes.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">↓</span><span><strong>Downloads sem limite</strong><small>Baixe conteúdos sem limite.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">⌕</span><span><strong>Pesquisa inteligente</strong><small>Encontre manuais e conteúdos com rapidez.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">☆</span><span><strong>Favoritos e histórico</strong><small>Organize e encontre novamente o que acessou.</small></span></div>
+      <div class="premium-benefit"><span class="premium-benefit-icon">◉</span><span><strong>Suporte prioritário</strong><small>Atendimento prioritário para assinantes.</small></span></div>
+    </div>
 
-  Valores dos Planos
+    <div class="premium-plan-options admin-plan-options" aria-label="Valores dos planos MAPTORK">
+      <label class="premium-plan-option admin-plan-option" for="adminPrecoMensal">
+        <span class="premium-plan-copy"><strong>Plano Mensal</strong><small>1 mês de acesso</small></span>
+        <span class="premium-plan-price admin-plan-price-field">
+          <span class="admin-plan-currency">R$</span>
+          <input type="text" id="adminPrecoMensal" name="maptork_admin_preco_mensal" inputmode="decimal" autocomplete="off" placeholder="39,90">
+        </span>
+      </label>
 
-</h3>
+      <label class="premium-plan-option selected admin-plan-option" for="adminPrecoTrimestral">
+        <span class="premium-plan-copy"><strong>Plano Trimestral</strong><small>3 meses de acesso</small></span>
+        <span class="premium-plan-price admin-plan-price-field">
+          <span class="admin-plan-currency">R$</span>
+          <input type="text" id="adminPrecoTrimestral" name="maptork_admin_preco_trimestral" inputmode="decimal" autocomplete="off" placeholder="89,90">
+        </span>
+        <span class="premium-plan-badge">Mais escolhido</span>
+      </label>
 
+      <label class="premium-plan-option admin-plan-option" for="adminPrecoAnual">
+        <span class="premium-plan-copy"><strong>Plano Anual</strong><small>1 ano de acesso</small></span>
+        <span class="premium-plan-price admin-plan-price-field">
+          <span class="admin-plan-currency">R$</span>
+          <input type="text" id="adminPrecoAnual" name="maptork_admin_preco_anual" inputmode="decimal" autocomplete="off" placeholder="297,00">
+        </span>
+        <span class="premium-plan-badge economy">Maior economia</span>
+      </label>
+    </div>
 
-<p>
-
-Defina o valor que será cobrado pela InfinitePay.
-
-</p>
-
-
-
-<div class="field">
-
-
-<label for="adminPrecoMensal">
-
-  Plano Mensal
-
-</label>
-
-
-<input
-  type="text"
-  id="adminPrecoMensal"
-  name="maptork_admin_preco_mensal"
-  inputmode="decimal"
-  autocomplete="off"
-  placeholder="39,90"
->
-
-
+    <button type="button" id="adminSalvarPrecosBtn" class="premium-subscribe-btn" onclick="salvarPrecosAdmin()">SALVAR VALORES</button>
+    <button type="button" class="cta admin-secondary admin-plan-reset" onclick="restaurarPrecosAdmin()">RESTAURAR VALORES PADRÃO</button>
+    <div id="adminPrecosMensagem" class="diagnostic-result"></div>
+  </div>
 </div>
-
-
-
-<div class="field">
-
-
-<label for="adminPrecoTrimestral">
-
-  Plano Trimestral
-
-</label>
-
-
-<input
-  type="text"
-  id="adminPrecoTrimestral"
-  name="maptork_admin_preco_trimestral"
-  inputmode="decimal"
-  autocomplete="off"
-  placeholder="89,90"
->
-
-
-</div>
-
-
-
-<div class="field">
-
-
-<label for="adminPrecoAnual">
-
-  Plano Anual
-
-</label>
-
-
-<input
-  type="text"
-  id="adminPrecoAnual"
-  name="maptork_admin_preco_anual"
-  inputmode="decimal"
-  autocomplete="off"
-  placeholder="297,00"
->
-
-
-</div>
-
-
-<button
-  class="cta"
-  id="adminSalvarPrecosBtn"
-  type="button"
-  onclick="salvarPrecosAdmin()"
->
-
-  SALVAR VALORES
-
-</button>
-
-
-<button
-  class="cta admin-secondary"
-  type="button"
-  onclick="restaurarPrecosAdmin()"
-  style="margin-top:10px"
->
-
-  RESTAURAR VALORES PADRÃO
-
-</button>
-
-
-<div
-  id="adminPrecosMensagem"
-  class="diagnostic-result"
->
-</div>
-
-
-</div>
-
-
 
 <!-- ================================================== -->
 <!-- IMAGEM DA TELA INICIAL / NOVAS ATUALIZAÇÕES -->
@@ -2176,7 +1721,7 @@ Defina o valor que será cobrado pela InfinitePay.
 
 <div id="adminConfigAtualizacoes" class="card form-card admin-image-card admin-config-panel" data-admin-panel="atualizacoes">
 
-<button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
+<button type="button" class="corner-close-btn" onclick="mostrarMenuAdmin()" aria-label="Fechar">×</button>
 
 <h3>Novas Atualizações</h3>
 
@@ -2227,17 +1772,20 @@ Cadastre várias novidades. Elas passam automaticamente na tela inicial, uma de 
     onchange="aoSelecionarImagemAdmin()"
   >
   <label for="adminHeroImageFile" class="admin-file-picker-btn">
-    SELECIONAR IMAGEM
+    ADICIONAR IMAGEM
   </label>
   <div id="adminHeroImageNome" class="admin-file-name">Nenhuma imagem selecionada</div>
   <small class="admin-image-help">JPG, PNG ou WEBP. A imagem é reduzida automaticamente.</small>
 </div>
 
-<div class="admin-image-preview is-empty" id="adminHeroPreviewBox" style="display:none">
-  <img
-    id="adminHeroImagePreview"
-    alt="Pré-visualização da atualização"
-  >
+<div class="admin-image-preview is-empty admin-single-preview-box" id="adminHeroPreviewBox" style="display:none">
+  <div class="admin-single-preview-item">
+    <img
+      id="adminHeroImagePreview"
+      alt="Pré-visualização da atualização"
+    >
+    <span class="admin-single-preview-badge">IMAGEM 1</span>
+  </div>
 </div>
 
 <div class="admin-image-actions">
@@ -2279,7 +1827,7 @@ Cadastre várias novidades. Elas passam automaticamente na tela inicial, uma de 
 
 <div id="adminConfigFerramentas" class="card form-card admin-tools-card admin-config-panel" data-admin-panel="ferramentas">
 
-  <button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
+  <button type="button" class="corner-close-btn" onclick="mostrarMenuAdmin()" aria-label="Fechar">×</button>
 
   <h3>Novas Ferramentas</h3>
 
@@ -2330,14 +1878,17 @@ Cadastre várias novidades. Elas passam automaticamente na tela inicial, uma de 
       onchange="aoSelecionarImagemFerramentaAdmin()"
     >
     <label for="adminFerramentaImagemFile" class="admin-file-picker-btn">
-      SELECIONAR IMAGEM
+      ADICIONAR IMAGEM
     </label>
     <div id="adminFerramentaImagemNome" class="admin-file-name">Nenhuma imagem selecionada</div>
     <small class="admin-image-help">JPG, PNG ou WEBP. A imagem é reduzida automaticamente.</small>
   </div>
 
-  <div class="admin-tool-image-preview" id="adminFerramentaPreviewBox" style="display:none">
-    <img id="adminFerramentaImagemPreview" alt="Pré-visualização da ferramenta">
+  <div class="admin-tool-image-preview admin-single-preview-box" id="adminFerramentaPreviewBox" style="display:none">
+    <div class="admin-single-preview-item">
+      <img id="adminFerramentaImagemPreview" alt="Pré-visualização da ferramenta">
+      <span class="admin-single-preview-badge">IMAGEM 1</span>
+    </div>
   </div>
 
   <div class="admin-tool-actions">
@@ -2352,6 +1903,7 @@ Cadastre várias novidades. Elas passam automaticamente na tela inicial, uma de 
 
     <button
       class="cta admin-secondary"
+      id="adminLimparFerramentaBtn"
       type="button"
       onclick="limparFormularioFerramentaAdmin()"
     >
@@ -2375,14 +1927,93 @@ Cadastre várias novidades. Elas passam automaticamente na tela inicial, uma de 
 
 
 <!-- ================================================== -->
+<!-- LOJA -->
+<!-- ================================================== -->
+<div id="adminConfigLoja" class="card form-card admin-tools-card admin-config-panel admin-loja-card" data-admin-panel="loja">
+  <button type="button" class="corner-close-btn" onclick="mostrarMenuAdmin()" aria-label="Fechar">×</button>
+
+  <h3>Loja</h3>
+  <p class="admin-tools-intro">Cadastre produtos para aparecer na aba Loja e nas novidades da tela inicial.</p>
+
+  <input type="hidden" id="adminLojaId" value="">
+
+  <div class="field">
+    <label for="adminLojaTitulo">Nome do produto</label>
+    <input type="text" id="adminLojaTitulo" maxlength="80" autocomplete="off" placeholder="Ex.: Jogo de ferramentas 108 peças">
+  </div>
+
+  <div class="field">
+    <label for="adminLojaTexto">Texto / descrição</label>
+    <textarea id="adminLojaTexto" maxlength="500" rows="4" placeholder="Descreva o produto ou a oferta."></textarea>
+  </div>
+
+  <div class="field">
+    <label for="adminLojaPreco">Preço / chamada <span class="field-optional">(opcional)</span></label>
+    <input type="text" id="adminLojaPreco" maxlength="80" autocomplete="off" placeholder="Ex.: R$ 149,90 • Consulte o preço • Oferta no link">
+  </div>
+
+  <div class="field">
+    <label for="adminLojaLink">Link do produto</label>
+    <input type="url" id="adminLojaLink" inputmode="url" autocomplete="off" placeholder="https://...">
+  </div>
+
+  <div class="field admin-tool-image-select-field">
+    <label class="admin-field-label">Imagem</label>
+    <input type="file" id="adminLojaImagemFile" accept="image/jpeg,image/png,image/webp" onchange="aoSelecionarImagemLojaAdmin()">
+    <label for="adminLojaImagemFile" class="admin-file-picker-btn">ADICIONAR IMAGEM</label>
+    <div id="adminLojaImagemNome" class="admin-file-name">Nenhuma imagem selecionada</div>
+    <small class="admin-image-help">JPG, PNG ou WEBP. A imagem é reduzida automaticamente.</small>
+  </div>
+
+  <div class="admin-tool-image-preview admin-single-preview-box" id="adminLojaPreviewBox" style="display:none">
+    <div class="admin-single-preview-item">
+      <img id="adminLojaImagemPreview" alt="Pré-visualização do produto">
+      <span class="admin-single-preview-badge">IMAGEM 1</span>
+    </div>
+  </div>
+
+  <div class="admin-tool-actions">
+    <button class="cta admin-tool-save-btn" id="adminSalvarLojaBtn" type="button" onclick="salvarProdutoLojaAdmin()">SALVAR PRODUTO</button>
+    <button class="cta admin-secondary" id="adminLimparLojaBtn" type="button" onclick="limparFormularioLojaAdmin()">LIMPAR</button>
+  </div>
+
+  <div id="adminLojaMensagem" class="diagnostic-result"></div>
+
+  <div class="admin-tools-list-header">
+    <div>
+      <strong>Produtos publicados</strong>
+      <small class="admin-tools-edit-hint">Use EDITAR para alterar nome, descrição, preço, link ou imagem.</small>
+    </div>
+    <button type="button" class="admin-tools-refresh" onclick="carregarLojaAdmin()">ATUALIZAR</button>
+  </div>
+
+  <div id="adminLojaLista" class="admin-tools-list"></div>
+</div>
+
+
+<!-- ================================================== -->
 <!-- USUÁRIOS -->
 <!-- ================================================== -->
 
+
+<div id="adminConfigComunidade" class="card form-card admin-config-panel admin-comunidade-panel" data-admin-panel="comunidade">
+  <button type="button" class="corner-close-btn" onclick="mostrarMenuAdmin()" aria-label="Fechar">×</button>
+  <h3>Gerenciar Comunidade</h3>
+  <p>Selecione o e-mail de um usuário para visualizar e moderar seus posts e comentários.</p>
+  <div class="admin-toolbar">
+    <button type="button" class="cta" onclick="carregarComunidadeAdmin()">ATUALIZAR</button>
+  </div>
+  <div id="adminComunidadeMensagem" class="diagnostic-result" style="display:none"></div>
+  <div id="adminComunidadeLista" class="admin-comunidade-lista">
+    <div class="comunidade-loading">Carregando publicações...</div>
+  </div>
+</div>
+
 <div id="adminConfigUsuarios" class="admin-config-panel" data-admin-panel="usuarios">
 
-<button type="button" class="admin-config-back" onclick="mostrarMenuAdmin()">‹ VOLTAR ÀS CONFIGURAÇÕES</button>
+<div class="card admin-toolbar admin-users-shell">
 
-<div class="card admin-toolbar">
+<button type="button" class="corner-close-btn" onclick="mostrarMenuAdmin()" aria-label="Fechar">×</button>
 
 
 <h3>
@@ -2568,7 +2199,7 @@ MAPTORK • Plataforma Premium • Produto digital
 </div>
 
 
-<script src="script.js"></script>
+<script src="script.js?v=20260909-v92-loja-gap-preco"></script>
 
 
 

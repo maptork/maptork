@@ -1,4 +1,4 @@
-const API = "https://script.google.com/macros/s/AKfycbzRX5WWEj0_cD3ERlixKXqB_feiUKzqnExED5KiKYH7VOTvt_tjoqEuTC60iq5cp3Ra/exec";
+const API = "https://script.google.com/macros/s/AKfycbzQyy2VRlJR_NZEoeMXNaLkhbdz3RL47EabYDLrRhFnOEmY-0k8g3YliBWXK99LaH7j/exec";
 
 function mostrarMensagem(texto, tipo) {
   const msg = document.getElementById("mensagem");
@@ -46,7 +46,7 @@ async function login() {
     mostrarMensagem("Bem-vindo, " + dados.nome + "!", "sucesso");
     
     setTimeout(() => {
-        window.location.href = "index.html";
+        window.location.replace("index.html");
     }, 1000);
 }
     
@@ -101,29 +101,4 @@ async function recuperarSenha() {
     }
     
 
-}
-function mostrarSenha() {
-
-    const senha = document.getElementById("senha");
-    const icone = document.getElementById("iconeOlho");
-
-    if (senha.type === "password") {
-
-        senha.type = "text";
-
-        icone.innerHTML = `
-            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19C5 19 1 12 1 12a21.8 21.8 0 0 1 5.06-5.94"/>
-            <path d="M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.22 4.31"/>
-            <path d="M1 1l22 22"/>
-        `;
-
-    } else {
-
-        senha.type = "password";
-
-        icone.innerHTML = `
-            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-            <circle cx="12" cy="12" r="3"/>
-        `;
-    }
 }

@@ -5,12 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login • MAPTORK</title>
 
+<script>
+(function(){
+  try { localStorage.setItem("maptork_tema", "light"); } catch (e) {}
+  document.documentElement.setAttribute("data-theme", "light");
+})();
+</script>
+
 <link rel="stylesheet" href="login.css">
 </head>
 
 <body>
 
 <div class="login-container">
+
+    <button class="auth-corner-close" type="button" onclick="window.location.href='index.html'" aria-label="Fechar">×</button>
 
     <img src="img/logo.png" class="logo" alt="MAPTORK">
 
@@ -23,21 +32,6 @@
 
 <div class="senha-box">
     <input type="password" id="senha" placeholder="Senha" required>
-    
-<span class="btn-olho" onclick="mostrarSenha()">
-    <svg id="iconeOlho" xmlns="http://www.w3.org/2000/svg"
-         viewBox="0 0 24 24"
-         fill="none"
-         stroke="currentColor"
-         stroke-width="2"
-         stroke-linecap="round"
-         stroke-linejoin="round">
-
-        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-        <circle cx="12" cy="12" r="3"/>
-
-    </svg>
-</span>
 </div>
 
     <button type="submit">
