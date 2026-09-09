@@ -567,6 +567,11 @@ async function searchDrive() {
     return;
   }
 
+  const setDriveStatusState = function(state) {
+    status.classList.remove("status-found", "status-error", "status-info");
+    if (state) status.classList.add(state);
+  };
+
   const q = String(
     typeof input.value === "string"
       ? input.value
@@ -575,12 +580,14 @@ async function searchDrive() {
 
   if (!q) {
     status.style.display = "block";
+    setDriveStatusState("status-info");
     status.innerHTML = "Digite a marca ou modelo.";
     results.innerHTML = "";
     return;
   }
 
   status.style.display = "block";
+  setDriveStatusState("status-info");
   status.innerHTML = "Pesquisando no Google Drive...";
   results.innerHTML = `
     <div class="pdf-card pdf-loading">
@@ -597,11 +604,13 @@ async function searchDrive() {
     const data = await response.json();
 
     if (!data.ok || !data.files || !data.files.length) {
+      setDriveStatusState("status-error");
       status.innerHTML = "Nenhum PDF encontrado.";
       results.innerHTML = "";
       return;
     }
 
+    setDriveStatusState("status-found");
     status.innerHTML = data.files.length + " arquivo(s) encontrado(s).";
     results.innerHTML = "";
 
@@ -2486,6 +2495,8 @@ let adminLojaImagemSelecaoSeq = 0;
 let lojaCacheLocalCarregado = false;
 let lojaInicioIndice = 0;
 let lojaInicioTimer = null;
+let lojaRetryTimer = null;
+let lojaRetryTentativas = 0;
 const MAPTORK_LOJA_CACHE_KEY = "storeProductsV1";
 const MAPTORK_LOJA_INTERVALO_MS = 7000;
 
@@ -2830,17 +2841,32 @@ function abrirLojaPeloInicio() {
 
 async function preCarregarLoja(forcarAtualizacao) {
   const forcar = !!forcarAtualizacao;
+
+  // Mostra primeiro os produtos salvos localmente para a Loja nunca ficar vazia
+  // enquanto o Google Script responde.
+  if (!lojaProdutosCache.length) {
+    try { await aplicarLojaCacheLocalUmaVez(); } catch (e) {}
+  }
+  renderizarLojaPublica();
+  renderizarLojaInicio();
+
   if (!forcar && lojaCarregadaNestaSessao) {
-    renderizarLojaPublica();
-    renderizarLojaInicio();
     return lojaProdutosCache;
   }
   if (!forcar && lojaCarregando) return lojaCarregando;
   lojaCarregando = (async function() {
     try {
       const resposta = await fetch(AUTH_API + "?action=obterLojaPublica&_t=" + Date.now(), { cache: "no-store" });
+      if (!resposta.ok) throw new Error("Loja: servidor respondeu HTTP " + resposta.status);
       const dados = await resposta.json();
-      let lista = dados && dados.ok === true && Array.isArray(dados.produtos) ? dados.produtos.map(normalizarProdutoLoja) : [];
+
+      // IMPORTANTE: erro de rota, sessão, implantação ou resposta inválida NÃO significa
+      // que a Loja ficou sem produtos. Nesses casos preservamos o cache existente.
+      if (!dados || dados.ok !== true || !Array.isArray(dados.produtos)) {
+        throw new Error(String((dados && (dados.mensagem || dados.message)) || "Resposta inválida da Loja"));
+      }
+
+      let lista = dados.produtos.map(normalizarProdutoLoja);
       lista = maptorkMesclarPendentesServidor(lista, lojaProdutosCache);
       const cacheLocal = await obterLojaCacheLocal();
       const cachePorId = Object.create(null);
@@ -2853,6 +2879,8 @@ async function preCarregarLoja(forcarAtualizacao) {
       lojaImagensCache = novasImagens;
       lojaProdutosCache = lista;
       lojaCarregadaNestaSessao = true;
+      lojaRetryTentativas = 0;
+      if (lojaRetryTimer) { clearTimeout(lojaRetryTimer); lojaRetryTimer = null; }
       renderizarLojaPublica();
       renderizarLojaInicio();
 
@@ -2879,6 +2907,14 @@ async function preCarregarLoja(forcarAtualizacao) {
       if (!lojaProdutosCache.length) await aplicarLojaCacheLocalUmaVez();
       renderizarLojaPublica();
       renderizarLojaInicio();
+      if (!lojaProdutosCache.length && lojaRetryTentativas < 6) {
+        lojaRetryTentativas++;
+        if (lojaRetryTimer) clearTimeout(lojaRetryTimer);
+        lojaRetryTimer = setTimeout(function(){
+          lojaCarregadaNestaSessao = false;
+          preCarregarLoja(true).catch(function(){});
+        }, Math.min(3000 + lojaRetryTentativas * 1500, 10000));
+      }
       return lojaProdutosCache;
     } finally {
       lojaCarregando = null;
@@ -5787,27 +5823,69 @@ async function atualizarBotaoPlano() {
 // ======================================================
 
 function criarUrlRetornoPagamento() {
-
-  const url =
-    new URL(
-      window.location.href
-    );
-
-
-  url.search = "";
-
-  url.hash = "";
-
-
-  url.searchParams.set(
-    "pagamento",
-    "retorno"
-  );
-
-
+  // O checkout abre fora da tela principal. O retorno usa uma página neutra
+  // que confirma o pagamento e fecha a janela, mantendo a sessão MAPTORK aberta.
+  const url = new URL('pagamento-retorno.html', window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('pagamento','retorno');
   return url.toString();
 }
 
+
+// ======================================================
+// CHECKOUT SEM PERDER A SESSÃO
+// ======================================================
+let maptorkPagamentoRevalidando = false;
+let maptorkPagamentoUltimaRevalidacao = 0;
+
+function maptorkMarcarPagamentoEmAndamento(plano) {
+  try {
+    localStorage.setItem('maptork_checkout_em_andamento', JSON.stringify({
+      plano:String(plano||''),
+      iniciadoEm:Date.now()
+    }));
+  } catch(e) {}
+}
+
+function maptorkObterPagamentoEmAndamento() {
+  try {
+    const bruto=localStorage.getItem('maptork_checkout_em_andamento');
+    const dado=bruto?JSON.parse(bruto):null;
+    if(!dado||!dado.iniciadoEm)return null;
+    if(Date.now()-Number(dado.iniciadoEm)>45*60*1000){
+      localStorage.removeItem('maptork_checkout_em_andamento');
+      return null;
+    }
+    return dado;
+  } catch(e) { return null; }
+}
+
+async function maptorkRevalidarPagamentoAoVoltar() {
+  if(!maptorkObterPagamentoEmAndamento())return;
+  if(!usuarioPossuiCadastroLocal())return;
+  const agora=Date.now();
+  if(maptorkPagamentoRevalidando||agora-maptorkPagamentoUltimaRevalidacao<1200)return;
+  maptorkPagamentoRevalidando=true;
+  maptorkPagamentoUltimaRevalidacao=agora;
+  try {
+    const info=await consultarAssinatura();
+    await atualizarBotaoPlano();
+    if(info&&info.ativo===true){
+      try{localStorage.removeItem('maptork_checkout_em_andamento');}catch(e){}
+      mostrarMensagemPagamento('Pagamento confirmado. Sua assinatura já está ativa.',true);
+    }
+  } catch(e) {
+    // Falha de rede não encerra a sessão nem manda para login/cadastro.
+    console.warn('Pagamento: revalidação adiada.',e);
+  } finally {
+    maptorkPagamentoRevalidando=false;
+  }
+}
+
+window.addEventListener('focus',function(){setTimeout(maptorkRevalidarPagamentoAoVoltar,250);});
+window.addEventListener('pageshow',function(){setTimeout(maptorkRevalidarPagamentoAoVoltar,250);});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(maptorkRevalidarPagamentoAoVoltar,250);});
 
 // ======================================================
 // ESCOLHER PLANO
@@ -5817,6 +5895,19 @@ async function escolherPlano(plano) {
 
   esconderMensagemPagamento();
 
+  // Abre a janela ainda dentro do clique do usuário para evitar bloqueio de popup.
+  // Se o navegador/WebView não permitir, usamos o comportamento tradicional.
+  let janelaPagamento=null;
+  try {
+    janelaPagamento=window.open('', 'maptork_pagamento');
+    if(janelaPagamento && !janelaPagamento.closed){
+      try {
+        janelaPagamento.document.open();
+        janelaPagamento.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAPTORK</title></head><body style="margin:0;background:#f5f7fa;font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh;color:#24324a"><div style="text-align:center;padding:24px"><b>Abrindo pagamento seguro...</b><p style="color:#7b8491">Aguarde alguns segundos.</p></div></body></html>');
+        janelaPagamento.document.close();
+      } catch(e) {}
+    }
+  } catch(e) { janelaPagamento=null; }
 
   const email =
     obterEmailUsuario();
@@ -5825,10 +5916,10 @@ async function escolherPlano(plano) {
   if (!email) {
 
     mostrarMensagemPagamento(
-      "Não foi possível identificar o e-mail da sua conta. Entre novamente no MAPTORK.",
+      "Não foi possível identificar o e-mail da sua conta. Abra novamente o Perfil e tente de novo.",
       false
     );
-
+    try{if(janelaPagamento&&!janelaPagamento.closed)janelaPagamento.close();}catch(e){}
     return;
   }
 
@@ -5912,9 +6003,18 @@ async function escolherPlano(plano) {
       plano
     );
 
+    maptorkMarcarPagamentoEmAndamento(plano);
 
-    window.location.href =
-      dados.checkoutUrl;
+    if(janelaPagamento && !janelaPagamento.closed){
+      try {
+        janelaPagamento.location.href=dados.checkoutUrl;
+        try{janelaPagamento.focus();}catch(e){}
+      } catch(e) {
+        window.location.href=dados.checkoutUrl;
+      }
+    } else {
+      window.location.href=dados.checkoutUrl;
+    }
 
 
   } catch (erro) {
@@ -5933,7 +6033,7 @@ async function escolherPlano(plano) {
       ),
       false
     );
-
+    try{if(janelaPagamento&&!janelaPagamento.closed)janelaPagamento.close();}catch(e){}
 
     botoes.forEach(
       function(btn) {
@@ -9011,8 +9111,34 @@ async function maptorkSyncEnviar(op){
     const fd=new FormData();fd.append('action','atualizarNome');fd.append('token',p.token||'');fd.append('nome',p.nome||'');
     r=await fetch(obterApiAssinaturas(),{method:'POST',body:fd});d=await r.json();
   }else if(op.tipo==='profile-photo'){
-    const fd=new FormData();fd.append('action','comunidadeSalvarFotoPerfil');fd.append('token',p.token||'');fd.append('fileName',p.fileName||'foto.jpg');fd.append('mimeType',p.mimeType||'image/jpeg');fd.append('imageBase64',p.imageBase64||'');
-    r=await fetch(comunidadeApiUrlEdicao(),{method:'POST',body:fd});d=await r.json();
+    // A foto do perfil é gratuita para qualquer conta cadastrada. Existem duas
+    // implantações da Comunidade no projeto; algumas versões antigas ainda
+    // exigiam assinatura. Tentamos as duas e aceitamos a primeira que reconhecer
+    // a sessão e salvar a imagem.
+    const endpointsFoto=[];
+    [comunidadeApiUrl(),comunidadeApiUrlEdicao()].forEach(function(url){
+      url=String(url||'').trim();
+      if(url&&endpointsFoto.indexOf(url)<0)endpointsFoto.push(url);
+    });
+    let ultimoErroFoto='Não foi possível salvar a foto de perfil.';
+    d=null;
+    for(let ei=0;ei<endpointsFoto.length;ei++){
+      try{
+        const fd=new FormData();
+        fd.append('action','comunidadeSalvarFotoPerfil');
+        fd.append('token',p.token||'');
+        fd.append('fileName',p.fileName||'foto.jpg');
+        fd.append('mimeType',p.mimeType||'image/jpeg');
+        fd.append('imageBase64',p.imageBase64||'');
+        r=await fetch(endpointsFoto[ei],{method:'POST',body:fd,cache:'no-store'});
+        const tentativa=await r.json();
+        if(tentativa&&tentativa.ok===true){d=tentativa;break;}
+        ultimoErroFoto=String((tentativa&&tentativa.mensagem)||ultimoErroFoto);
+      }catch(erroFoto){
+        ultimoErroFoto=String((erroFoto&&erroFoto.message)||ultimoErroFoto);
+      }
+    }
+    if(!d||d.ok!==true){const errFoto=new Error(ultimoErroFoto);errFoto.permanente=true;throw errFoto;}
   }else if(op.tipo==='tool-save'){
     const form=new URLSearchParams();form.set('action','adminSalvarFerramenta');form.set('token',p.token||'');form.set('id',p.id||'');form.set('titulo',p.titulo||'');form.set('texto',p.texto||'');form.set('link',p.link||'');if(p.imageBase64){form.set('imageBase64',p.imageBase64);form.set('fileName',p.fileName||'');form.set('mimeType',p.mimeType||'');}
     r=await fetch(AUTH_API+'?action=adminSalvarFerramenta&_t='+Date.now(),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:form.toString()});d=await r.json();

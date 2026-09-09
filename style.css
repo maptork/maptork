@@ -1731,10 +1731,18 @@ body,
 #driveStatus{
   margin-top:14px;
   padding:0 4px;
-  color:#c9d1df;
+  color:#7b8494;
   background:transparent;
   border:0;
+  font-weight:700;
 }
+html[data-theme="light"] #driveStatus{color:#7b8494}
+#driveStatus.status-found{color:#111827;font-weight:800}
+html[data-theme="light"] #driveStatus.status-found{color:#111827}
+#driveStatus.status-error{color:#d93025;font-weight:800}
+html[data-theme="light"] #driveStatus.status-error{color:#d93025}
+#driveStatus.status-info{color:#7b8494}
+html[data-theme="light"] #driveStatus.status-info{color:#7b8494}
 
 .drive-results{
   display:grid;
@@ -6060,5 +6068,37 @@ html[data-theme="light"] .inicio-loja-card-preco{
   }
   .inicio-loja-card-preco{
     margin-top:3px!important;
+  }
+}
+
+/* MAPTORK V93 - alinha a chamada de preço nos cards da Loja */
+.inicio-loja-card-title{
+  min-height:2.5em;
+  max-height:2.5em;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+.inicio-loja-card-text{
+  height:2.8em;
+  min-height:2.8em!important;
+  max-height:2.8em;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+.inicio-loja-card-preco{
+  margin-top:3px!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+@media(max-width:640px){
+  .inicio-loja-card-title{
+    min-height:2.5em;
+    max-height:2.5em;
+  }
+  .inicio-loja-card-text{
+    height:2.6em;
+    min-height:2.6em!important;
+    max-height:2.6em;
   }
 }

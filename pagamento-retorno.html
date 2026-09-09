@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MAPTORK • Pagamento</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:#f3f5f8;color:#233149}body{min-height:100vh;display:grid;place-items:center;padding:22px}.box{width:min(100%,480px);background:#fff;border:1px solid #dce3eb;border-radius:28px;padding:28px 22px;text-align:center;box-shadow:0 18px 42px rgba(35,49,73,.09)}.logo{font-size:30px;font-weight:900;letter-spacing:.5px;margin-bottom:18px}.icon{width:70px;height:70px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#eaf8ff;color:#23a8e7;font-size:34px;font-weight:900}.box h1{margin:0;font-size:24px}.box p{margin:12px 0 0;color:#7d8794;line-height:1.5}.btn{margin-top:22px;width:100%;min-height:54px;border:0;border-radius:18px;background:linear-gradient(180deg,#4bc0f6,#25a5e7);color:#fff;font-size:16px;font-weight:900}.small{font-size:12px!important;margin-top:14px!important}
+</style>
+</head>
+<body>
+<main class="box">
+  <div class="logo">MAPTORK</div>
+  <div class="icon" id="icone">✓</div>
+  <h1 id="titulo">Finalizando pagamento</h1>
+  <p id="mensagem">Estamos confirmando a transação. Sua tela do MAPTORK continua conectada.</p>
+  <button class="btn" type="button" id="voltar">VOLTAR AO MAPTORK</button>
+  <p class="small">Esta página não pede e-mail nem senha.</p>
+</main>
+<script>
+const API='https://script.google.com/macros/s/AKfycbzQyy2VRlJR_NZEoeMXNaLkhbdz3RL47EabYDLrRhFnOEmY-0k8g3YliBWXK99LaH7j/exec';
+function qs(n){return new URLSearchParams(location.search).get(n)||''}
+function status(t,m,ok){document.getElementById('titulo').textContent=t;document.getElementById('mensagem').textContent=m;document.getElementById('icone').textContent=ok?'✓':'↻'}
+async function confirmar(){
+  const order=qs('order_nsu'),transaction=qs('transaction_nsu'),slug=qs('slug');
+  if(order&&transaction&&slug){
+    try{
+      const u=API+'?acao=confirmarPagamento&order_nsu='+encodeURIComponent(order)+'&transaction_nsu='+encodeURIComponent(transaction)+'&slug='+encodeURIComponent(slug)+'&_t='+Date.now();
+      const r=await fetch(u,{cache:'no-store'});const d=await r.json();
+      if(d&&(d.pago===true||d.sucesso===true)) status('Pagamento confirmado','Sua assinatura está sendo atualizada no MAPTORK.',true);
+      else status('Pagamento recebido','Volte ao MAPTORK. A confirmação pode levar alguns segundos.',true);
+    }catch(e){status('Pagamento recebido','Volte ao MAPTORK. A confirmação será concluída em segundo plano.',true)}
+  }else{
+    status('Volte ao MAPTORK','Você saiu do pagamento. Sua sessão continua aberta no MAPTORK.',true);
+  }
+  try{localStorage.setItem('maptork_pagamento_retorno_em',String(Date.now()));}catch(e){}
+  if(window.opener&&!window.opener.closed){setTimeout(function(){try{window.close()}catch(e){}},900)}
+}
+document.getElementById('voltar').onclick=function(){
+  if(window.opener&&!window.opener.closed){try{window.opener.focus()}catch(e){};try{window.close()}catch(e){};return}
+  // Se o checkout foi aberto na mesma aba, volta ao site sem enviar para login/cadastro.
+  location.replace('index.html');
+};
+confirmar();
+</script>
+</body>
+</html>
