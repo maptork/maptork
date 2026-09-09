@@ -2833,6 +2833,8 @@ html[data-theme="light"] .admin-comunidade-email{color:#475569!important}
 .admin-comunidade-thumb{appearance:none;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#090b0f;aspect-ratio:1/1;cursor:pointer}
 .admin-comunidade-thumb img{width:100%!important;height:100%!important;aspect-ratio:auto!important;object-fit:cover!important;border-radius:0!important;display:block;background:#090b0f}
 .admin-comunidade-social-resumo{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px;color:var(--muted);font-size:10px;font-weight:800}
+.admin-comunidade-video{position:relative;width:100%;margin:12px 0;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:16/9;max-height:min(62vw,360px)}
+.admin-comunidade-video iframe,.admin-comunidade-video .comunidade-youtube{display:block;width:100%;height:100%;border:0}
 
 html[data-theme="light"] .comunidade-post{background:#fff;border-color:#d7dde6;color:#1d2734;box-shadow:0 8px 24px rgba(33,43,58,.08)}
 html[data-theme="light"] .comunidade-avatar{background:linear-gradient(145deg,#e8edf4,#dce3ec);border-color:#d5dce6;color:#26354b}
@@ -6101,4 +6103,26 @@ html[data-theme="light"] .inicio-loja-card-preco{
     min-height:2.6em!important;
     max-height:2.6em;
   }
+}
+
+
+/* =====================================================
+   MAPTORK V92 — SOMBRA LEVE E PADRONIZADA NO PERFIL E ADM
+===================================================== */
+html[data-theme="light"] #conta .conta-list-card,
+html[data-theme="light"] #admin .conta-list-card,
+html[data-theme="light"] #admin .admin-config-menu{
+  box-shadow:0 4px 12px rgba(39,50,73,.035)!important;
+}
+
+html[data-theme="light"] #conta .conta-list-icon,
+html[data-theme="light"] #admin .conta-list-icon,
+html[data-theme="light"] #admin .admin-config-icon{
+  box-shadow:0 3px 8px rgba(39,50,73,.035)!important;
+}
+
+html[data-theme="light"] #conta .conta-list-item,
+html[data-theme="light"] #admin .conta-list-item,
+html[data-theme="light"] #admin .admin-config-item{
+  box-shadow:none!important;
 }

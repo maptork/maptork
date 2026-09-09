@@ -5895,20 +5895,6 @@ async function escolherPlano(plano) {
 
   esconderMensagemPagamento();
 
-  // Abre a janela ainda dentro do clique do usuário para evitar bloqueio de popup.
-  // Se o navegador/WebView não permitir, usamos o comportamento tradicional.
-  let janelaPagamento=null;
-  try {
-    janelaPagamento=window.open('', 'maptork_pagamento');
-    if(janelaPagamento && !janelaPagamento.closed){
-      try {
-        janelaPagamento.document.open();
-        janelaPagamento.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAPTORK</title></head><body style="margin:0;background:#f5f7fa;font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh;color:#24324a"><div style="text-align:center;padding:24px"><b>Abrindo pagamento seguro...</b><p style="color:#7b8491">Aguarde alguns segundos.</p></div></body></html>');
-        janelaPagamento.document.close();
-      } catch(e) {}
-    }
-  } catch(e) { janelaPagamento=null; }
-
   const email =
     obterEmailUsuario();
 
@@ -5919,7 +5905,6 @@ async function escolherPlano(plano) {
       "Não foi possível identificar o e-mail da sua conta. Abra novamente o Perfil e tente de novo.",
       false
     );
-    try{if(janelaPagamento&&!janelaPagamento.closed)janelaPagamento.close();}catch(e){}
     return;
   }
 
@@ -6005,16 +5990,10 @@ async function escolherPlano(plano) {
 
     maptorkMarcarPagamentoEmAndamento(plano);
 
-    if(janelaPagamento && !janelaPagamento.closed){
-      try {
-        janelaPagamento.location.href=dados.checkoutUrl;
-        try{janelaPagamento.focus();}catch(e){}
-      } catch(e) {
-        window.location.href=dados.checkoutUrl;
-      }
-    } else {
-      window.location.href=dados.checkoutUrl;
-    }
+    // Abre o checkout na mesma aba somente depois que a URL estiver pronta.
+    // Assim o usuário não vê uma aba about:blank enquanto o servidor cria o pagamento.
+    // A sessão MAPTORK permanece no localStorage e é retomada em pagamento-retorno.html.
+    window.location.assign(dados.checkoutUrl);
 
 
   } catch (erro) {
@@ -7216,17 +7195,47 @@ function comunidadeMesclarPostsOtimistas(listaServidor, cacheAtual) {
   const idsOcultarServidor = Object.create(null);
 
   otimistas.forEach(function(local){
+    const idLocal = String(local && local.id || '').trim();
     const idReal = String(local && local._postIdServidor || '').trim();
     const esperado = Math.max(0, Number(local && local._fotosEsperadas || 0));
-    const remoto = idReal ? idsServidor[idReal] : null;
+    const remoto = (idReal && idsServidor[idReal]) || (idLocal && idsServidor[idLocal]) || null;
+    const remotoId = String(remoto && remoto.id || idReal || idLocal || '').trim();
     const fotosRemotas = remoto && Array.isArray(remoto.fotos) ? remoto.fotos.length : 0;
+
+    // EDIÇÃO OTIMISTA: título/nome, descrição, WhatsApp e vídeo mudam na tela
+    // imediatamente. Uma atualização do feed em segundo plano nunca pode trazer
+    // o conteúdo antigo de volta enquanto a edição ainda está sendo sincronizada.
+    if (local && local._editandoSync === true) {
+      manter.push(local);
+      if (remotoId) idsOcultarServidor[remotoId] = true;
+      return;
+    }
+
+    // Mesmo após o servidor confirmar a gravação, a listagem pública pode levar
+    // alguns instantes para refletir o novo conteúdo. Durante essa pequena janela,
+    // preservamos a versão local até a resposta remota realmente conter a edição.
+    const preservarEdicaoAte = Number(local && local._preservarEdicaoAte || 0);
+    if (remoto && preservarEdicaoAte > Date.now()) {
+      const ytRemoto = String(remoto.youtubeId || '');
+      const ytLocal = String(local.youtubeId || '');
+      const remotoJaAtualizou =
+        String(remoto.cabecalho || '') === String(local.cabecalho || '') &&
+        String(remoto.descricao || '') === String(local.descricao || '') &&
+        String(remoto.whatsapp || '') === String(local.whatsapp || '') &&
+        ytRemoto === ytLocal;
+      if (!remotoJaAtualizou) {
+        manter.push(local);
+        if (remotoId) idsOcultarServidor[remotoId] = true;
+        return;
+      }
+    }
 
     // Enquanto o servidor ainda não devolveu todas as imagens enviadas,
     // preserva a versão local com blob URL para a foto nunca sumir da tela.
     const servidorCompleto = !!remoto && (esperado === 0 || fotosRemotas >= esperado);
     if (!servidorCompleto) {
       manter.push(local);
-      if (idReal) idsOcultarServidor[idReal] = true;
+      if (remotoId) idsOcultarServidor[remotoId] = true;
       return;
     }
 
@@ -8519,6 +8528,57 @@ async function comprimirFotoComunidade(file) {
   return {base64:out.split(',')[1],mimeType:mime,fileName:(file.name||'foto.jpg'),dataUrl:out};
 }
 
+function comunidadeAplicarEdicaoPostLocalInstantanea(editId, original, alteracoes) {
+  const sid = String(editId || '').trim();
+  const email = String((alteracoes && alteracoes.email) || localStorage.getItem('email') || '').trim().toLowerCase();
+  const originalCab = String(original && original.cabecalho || '');
+  const originalDesc = String(original && original.descricao || '');
+  const originalUid = String(original && original.usuarioId || '');
+  let encontrouPublico = false;
+
+  function corresponde(post) {
+    if (!post) return false;
+    const pid = String(post.id || '').trim();
+    const preal = String(post._postIdServidor || '').trim();
+    if (sid && (pid === sid || preal === sid)) return true;
+    // Fallback para caches antigos onde o ID público e o ID de "Meus posts"
+    // vieram diferentes. Usa a identidade + conteúdo anterior para não alterar
+    // outra publicação do mesmo usuário por engano.
+    const pemail = String(post.email || '').trim().toLowerCase();
+    const puid = String(post.usuarioId || '').trim();
+    const mesmaIdentidade = (email && pemail === email) || (originalUid && puid === originalUid);
+    return !!(mesmaIdentidade &&
+      String(post.cabecalho || '') === originalCab &&
+      String(post.descricao || '') === originalDesc);
+  }
+
+  function aplicar(lista, publico) {
+    if (!Array.isArray(lista)) return lista;
+    return lista.map(function(post) {
+      if (!corresponde(post)) return post;
+      if (publico) encontrouPublico = true;
+      return Object.assign({}, post, alteracoes || {}, {
+        _otimista: true,
+        _editandoSync: true,
+        _postIdServidor: sid || String(post._postIdServidor || post.id || ''),
+        _preservarEdicaoAte: Date.now() + 20000
+      });
+    });
+  }
+
+  comunidadeMeusPostsCache = aplicar(comunidadeMeusPostsCache, false);
+  comunidadePublicaCache = aplicar(comunidadePublicaCache, true);
+
+  // Se o post público ainda não estava em memória, não criamos duplicata; a
+  // próxima listagem será mesclada com a edição otimista assim que chegar.
+  renderizarMeusPostsComunidade(comunidadeMeusPostsCache);
+  renderizarComunidadePublica(comunidadePublicaCache);
+  renderizarNovosPostsInicio(comunidadePublicaCache);
+  try { comunidadeSalvarCacheUsuario(); } catch (_) {}
+  try { comunidadeSalvarCachePublico(); } catch (_) {}
+  return encontrouPublico;
+}
+
 async function salvarPerfilComunidade() {
   if (!(await exigirAssinaturaAtiva('Publicar na Comunidade'))) return;
   const token=String(localStorage.getItem('token')||'').trim();
@@ -8541,17 +8601,16 @@ async function salvarPerfilComunidade() {
     // EDITAR: altera a publicação na tela antes de qualquer chamada ao servidor.
     const original = comunidadeMeusPostsCache.find(function(p){return String(p&&p.id||'')===editId;}) || comunidadePublicaCache.find(function(p){return String(p&&p.id||'')===editId;}) || {};
     const fotosExistentes = Array.isArray(comunidadeFotosAtuaisEdicao) ? comunidadeFotosAtuaisEdicao.slice() : (Array.isArray(original.fotos)?original.fotos.slice():[]);
-    const localEditado = Object.assign({}, original, {
-      id:editId,email:emailAtual||original.email,nome:nomeAtual||original.nome,
+    const alteracoesLocais = {
+      email:emailAtual||original.email,nome:nomeAtual||original.nome,
       cabecalho:cab,descricao:desc,whatsapp:wat,youtubeId:comunidadeExtrairYoutubeId(youtube),
       fotoPerfil:(comunidadeMeuPerfil&&comunidadeMeuPerfil.fotoPerfil)||original.fotoPerfil||null,
       fotos:fotosExistentes.concat(fotosParaEnviar.map(function(f){return {url:f.url,id:'',_local:true};})),
-      _otimista:true,_editandoSync:true,_postIdServidor:editId,
       _fotosEsperadas:fotosExistentes.length+fotosParaEnviar.length
-    });
-    comunidadeMeusPostsCache=comunidadeMeusPostsCache.map(function(p){return String(p&&p.id||'')===editId?localEditado:p;});
-    comunidadePublicaCache=comunidadePublicaCache.map(function(p){return String(p&&p.id||'')===editId?localEditado:p;});
-    renderizarMeusPostsComunidade(comunidadeMeusPostsCache);renderizarComunidadePublica(comunidadePublicaCache);renderizarNovosPostsInicio(comunidadePublicaCache);
+    };
+    // Atualiza "Meus posts", feed da Comunidade e Novos Posts NA MESMA HORA.
+    // A gravação no Google Script continua totalmente em segundo plano.
+    comunidadeAplicarEdicaoPostLocalInstantanea(editId, original, alteracoesLocais);
     prepararNovaPublicacaoComunidade();
     comunidadeMensagem('comunidadeEditorMensagem','Publicação atualizada.',true);
     if(btn){btn.textContent='SALVO ✓';setTimeout(function(){if(btn)btn.textContent='PUBLICAR AGORA';},700);}
@@ -8598,38 +8657,69 @@ async function salvarPerfilComunidade() {
   },0);
 }
 
+function comunidadeAplicarExclusaoFotoLocal(postId, fotoId) {
+  const sid = String(postId || '').trim();
+  const fid = String(fotoId || '').trim();
+  if (!fid) return;
+
+  // A miniatura desaparece no mesmo instante, antes de qualquer chamada de rede.
+  comunidadeFotosAtuaisEdicao = (Array.isArray(comunidadeFotosAtuaisEdicao) ? comunidadeFotosAtuaisEdicao : []).filter(function(f){
+    return String(f && f.id || '').trim() !== fid;
+  });
+
+  function limparFotoDoPost(post) {
+    if (!post) return post;
+    const pid = String(post.id || '').trim();
+    const preal = String(post._postIdServidor || '').trim();
+    if (sid && pid !== sid && preal !== sid) return post;
+    const fotos = (Array.isArray(post.fotos) ? post.fotos : []).filter(function(f){
+      return String(f && f.id || '').trim() !== fid;
+    });
+    return Object.assign({}, post, {
+      fotos: fotos,
+      _otimista: true,
+      _editandoSync: true,
+      _preservarEdicaoAte: Date.now() + 60000,
+      _fotoExcluidaPendente: fid
+    });
+  }
+
+  if (sid) {
+    comunidadeMeusPostsCache = (Array.isArray(comunidadeMeusPostsCache) ? comunidadeMeusPostsCache : []).map(limparFotoDoPost);
+    comunidadePublicaCache = (Array.isArray(comunidadePublicaCache) ? comunidadePublicaCache : []).map(limparFotoDoPost);
+  } else if (comunidadeMeuPerfil) {
+    comunidadeMeuPerfil = Object.assign({}, comunidadeMeuPerfil, {
+      fotos: (Array.isArray(comunidadeMeuPerfil.fotos) ? comunidadeMeuPerfil.fotos : []).filter(function(f){
+        return String(f && f.id || '').trim() !== fid;
+      })
+    });
+  }
+
+  renderizarMinhasFotosComunidade();
+  renderizarMeusPostsComunidade(comunidadeMeusPostsCache);
+  renderizarComunidadePublica(comunidadePublicaCache);
+  renderizarNovosPostsInicio(comunidadePublicaCache);
+  atualizarContadorFotosComunidade();
+  try { comunidadeSalvarCacheUsuario(); } catch (_) {}
+  try { comunidadeSalvarCachePublico(); } catch (_) {}
+}
+
 async function excluirFotoComunidade(id) {
   if (!id || !confirm('Excluir esta foto?')) return;
   const token=String(localStorage.getItem('token')||'').trim();
+  const postId=String(comunidadePostEditandoId||'').trim();
+
+  // Resposta instantânea para o usuário; o servidor grava em segundo plano.
+  comunidadeAplicarExclusaoFotoLocal(postId,id);
+  comunidadeMensagem('comunidadeEditorMensagem','Foto removida.',true);
+
   try {
-    const fd=new FormData();fd.append('action','comunidadeExcluirFoto');fd.append('token',token);fd.append('fotoId',id);
-    if (comunidadePostEditandoId) fd.append('postId', comunidadePostEditandoId);
-    const endpointFoto = comunidadePostEditandoId ? comunidadeApiUrlEdicao() : comunidadeApiUrl();
-    const r=await fetch(endpointFoto,{method:'POST',body:fd});const d=await r.json();if(!d||d.ok!==true)throw new Error((d&&d.mensagem)||'Erro ao excluir foto.');
-    const postAtualizado = d.post || d.perfil || (d.dados && (d.dados.post || d.dados.perfil)) || null;
-    if (comunidadePostEditandoId && postAtualizado && String(postAtualizado.id || '') === String(comunidadePostEditandoId)) {
-      comunidadeFotosAtuaisEdicao = Array.isArray(postAtualizado.fotos) ? postAtualizado.fotos.slice(0,10) : [];
-      comunidadeMeusPostsCache = comunidadeMeusPostsCache.map(function(p){ return String(p && p.id || '') === String(postAtualizado.id || '') ? postAtualizado : p; });
-      comunidadePublicaCache = comunidadePublicaCache.map(function(p){ return String(p && p.id || '') === String(postAtualizado.id || '') ? postAtualizado : p; });
-      renderizarMinhasFotosComunidade();
-      renderizarMeusPostsComunidade(comunidadeMeusPostsCache);
-      renderizarComunidadePublica(comunidadePublicaCache);
-      renderizarNovosPostsInicio(comunidadePublicaCache);
-      comunidadeSalvarCacheUsuario();
-      comunidadeMensagem('comunidadeEditorMensagem','Foto removida da publicação.',true);
-      return;
-    }
-    comunidadePublicaCache=[];
-    const perfilAtualizado = d.perfil || (d.dados && d.dados.perfil) || null;
-    if (perfilAtualizado) {
-      comunidadeMeuPerfil = perfilAtualizado;
-      renderizarMinhasFotosComunidade();
-      atualizarStatusMeuPerfilComunidade();
-    }
-    comunidadeMeuPerfilCarregado = false;
-    comunidadeLimparCacheImagens();
-    await carregarMeuPerfilComunidade(true);
-  } catch(e){comunidadeMensagem('comunidadeEditorMensagem',e.message||'Erro ao excluir foto.',false)}
+    await maptorkSyncEnfileirar('community-photo-delete','community-photo-delete:'+(postId||'perfil')+':'+String(id),{
+      token:token,postId:postId,fotoId:String(id)
+    });
+  } catch(e) {
+    comunidadeMensagem('comunidadeEditorMensagem','A foto saiu da tela, mas a sincronização ficou pendente. Tentaremos novamente automaticamente.',false);
+  }
 }
 
 async function carregarComunidadeAdmin() {
@@ -8683,7 +8773,7 @@ function renderizarPostsComunidadeAdmin(perfis){
       '<div class="admin-comunidade-head"><div><span class="comunidade-status-chip status-'+comunidadeEscaparHtml(p.status||'pendente')+'">'+comunidadeEscaparHtml((p.status||'pendente').toUpperCase())+'</span><h4>'+comunidadeEscaparHtml(p.cabecalho||p.nome||'Usuário')+'</h4></div><strong>'+fotos.length+' foto(s)</strong></div>'+
       '<p>'+comunidadeEscaparHtml(p.descricao||'')+'</p>'+(p.whatsapp?'<small>WhatsApp: '+comunidadeEscaparHtml(p.whatsapp)+'</small>':'')+
       '<div class="admin-comunidade-social-resumo"><span>'+Number(p.curtidas||0)+' curtidas</span><span>'+Number(p.comentariosTotal||0)+' comentários</span></div>'+
-      (p.youtubeId?'<iframe class="comunidade-youtube" src="https://www.youtube-nocookie.com/embed/'+comunidadeEscaparHtml(p.youtubeId)+'?playsinline=1&fs=0&rel=0&enablejsapi=1" title="Vídeo da publicação" loading="lazy" allowfullscreen></iframe>':'')+
+      (p.youtubeId?'<div class="admin-comunidade-video comunidade-post-media has-video"><iframe class="comunidade-youtube" src="https://www.youtube-nocookie.com/embed/'+comunidadeEscaparHtml(p.youtubeId)+'?playsinline=1&fs=0&rel=0&enablejsapi=1" title="Vídeo da publicação" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>':'')+
       '<div class="admin-comunidade-comentarios">'+(Array.isArray(p.comentarios)?p.comentarios.map(function(c){return '<div class="admin-comunidade-comentario"><span><strong>'+comunidadeEscaparHtml(c.nome||'Membro')+'</strong> '+comunidadeEscaparHtml(c.texto||'')+'</span><button type="button" data-post="'+comunidadeEscaparHtml(p.id)+'" data-comentario="'+comunidadeEscaparHtml(c.id)+'" onclick="excluirComentarioComunidadeAdmin(this.dataset.post,this.dataset.comentario)">APAGAR</button></div>';}).join(''):'')+'</div>'+
       '<div class="admin-comunidade-fotos">'+fotos.map(function(f){const u=comunidadeImagemUrl(f);return '<button type="button" class="admin-comunidade-thumb" data-url="'+comunidadeEscaparHtml(u)+'" onclick="abrirImagemComunidade(this.dataset.url)"><img src="'+comunidadeEscaparHtml(u)+'" '+comunidadeAtributosImagem(f)+' alt="Foto para moderação" loading="eager" decoding="async"></button>'}).join('')+'</div>'+
       '<div class="admin-comunidade-actions"><button type="button" class="cta admin-tool-delete" data-id="'+comunidadeEscaparHtml(p.id)+'" onclick="excluirPerfilComunidadeAdmin(this.dataset.id)">APAGAR POST</button></div>'+ 
@@ -9148,6 +9238,14 @@ async function maptorkSyncEnviar(op){
   }else if(op.tipo==='update-save'){
     const form=new URLSearchParams();form.set('action','adminSalvarImagemInicio');form.set('token',p.token||'');if(p.id){form.set('id',p.id);form.set('idAtualizacao',p.id);form.set('modo','editar');}else form.set('modo','novo');form.set('titulo',p.titulo||'');form.set('texto',p.texto||'');form.set('link',p.link||'');if(p.imageBase64){form.set('imageBase64',p.imageBase64);form.set('fileName',p.fileName||'');form.set('mimeType',p.mimeType||'');}
     r=await fetch(AUTH_API+'?action=adminSalvarImagemInicio&_t='+Date.now(),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:form.toString()});d=await r.json();
+  }else if(op.tipo==='community-photo-delete'){
+    const fd=new FormData();
+    fd.append('action','comunidadeExcluirFoto');
+    fd.append('token',p.token||'');
+    fd.append('fotoId',p.fotoId||'');
+    if(p.postId)fd.append('postId',p.postId);
+    const endpointFoto=p.postId?comunidadeApiUrlEdicao():comunidadeApiUrl();
+    r=await fetch(endpointFoto,{method:'POST',body:fd,cache:'no-store'});d=await r.json();
   }else if(op.tipo==='community-create'){
     if(!p.postIdServidor){
       let fd=new FormData();fd.append('action','comunidadeSalvarPerfil');fd.append('token',p.token||'');fd.append('cabecalho',p.cabecalho||'');fd.append('descricao',p.descricao||'');fd.append('whatsapp',p.whatsapp||'');fd.append('youtube',p.youtube||'');
@@ -9185,14 +9283,43 @@ function maptorkSyncConfirmar(op,d){
     maptorkConfirmarLoja(p,d);mostrarMensagemLojaAdmin('Produto sincronizado.',true);
   }else if(op.tipo==='update-save'){
     maptorkConfirmarAtualizacao(p,d);mostrarMensagemImagemAdmin('Atualização sincronizada.',true);
+  }else if(op.tipo==='community-photo-delete'){
+    const postId=String(p.postId||'');
+    const fotoId=String(p.fotoId||'');
+    comunidadeAplicarExclusaoFotoLocal(postId,fotoId);
+    comunidadeLimparCacheImagens();
+    comunidadeMensagem('comunidadeEditorMensagem','Foto excluída.',true);
+    // Revalida depois que a exclusão já foi confirmada, sem bloquear a tela.
+    setTimeout(function(){
+      if(postId){
+        Promise.all([carregarMeusPostsComunidade(true),carregarComunidadePublica(true)]).catch(function(){});
+      }else{
+        carregarMeuPerfilComunidade(true).catch(function(){});
+      }
+    },900);
   }else if(op.tipo==='community-create'){
     const local=comunidadePublicaCache.find(function(x){return String(x&&x.id||'')===String(p.tempId||'');})||comunidadeMeusPostsCache.find(function(x){return String(x&&x.id||'')===String(p.tempId||'');});
     if(local){local._postIdServidor=String((d&&d.postId)||p.postIdServidor||'');comunidadeSincronizarInteracoesPendentes(local,local._postIdServidor).catch(function(){});}
     comunidadeMensagem('comunidadeEditorMensagem','Publicado com sucesso.',true);comunidadeMeuPerfilCarregado=false;comunidadeLimparCacheImagens();
     setTimeout(function(){Promise.all([carregarMeuPerfilComunidade(true),carregarMeusPostsComunidade(true),carregarComunidadePublica(true)]).catch(function(){});},350);
   }else if(op.tipo==='community-edit'){
+    const editId=String(p.id||'');
+    [comunidadePublicaCache,comunidadeMeusPostsCache].forEach(function(lista){
+      (Array.isArray(lista)?lista:[]).forEach(function(item){
+        const iid=String(item&&item.id||'');
+        const ireal=String(item&&item._postIdServidor||'');
+        if(iid===editId||ireal===editId){
+          item._editandoSync=false;
+          item._otimista=true;
+          item._preservarEdicaoAte=Date.now()+20000;
+        }
+      });
+    });
+    try{comunidadeSalvarCacheUsuario();comunidadeSalvarCachePublico();}catch(_){}
     comunidadeMensagem('comunidadeEditorMensagem','Publicação sincronizada.',true);comunidadeMeuPerfilCarregado=false;comunidadeLimparCacheImagens();
-    setTimeout(function(){Promise.all([carregarMeuPerfilComunidade(true),carregarMeusPostsComunidade(true),carregarComunidadePublica(true)]).catch(function(){});},350);
+    // Revalida várias vezes sem bloquear a interface. A versão local continua na
+    // tela até o feed remoto já devolver o título/descrição novos.
+    [350,1800,5000].forEach(function(ms){setTimeout(function(){Promise.all([carregarMeuPerfilComunidade(true),carregarMeusPostsComunidade(true),carregarComunidadePublica(true)]).catch(function(){});},ms);});
   }
 }
 
@@ -9208,7 +9335,14 @@ function maptorkSyncFalhaPermanente(op,e){
   else if(op.tipo==='tool-save')mostrarMensagemFerramentaAdmin(msg+' A alteração continua visível localmente.',false);
   else if(op.tipo==='store-save')mostrarMensagemLojaAdmin(msg+' A alteração continua visível localmente.',false);
   else if(op.tipo==='update-save')mostrarMensagemImagemAdmin(msg+' A alteração continua visível localmente.',false);
-  else if(op.tipo==='community-create'||op.tipo==='community-edit')comunidadeMensagem('comunidadeEditorMensagem',msg+' A publicação continua visível neste aparelho; tente salvar novamente se necessário.',false);
+  else if(op.tipo==='community-photo-delete')comunidadeMensagem('comunidadeEditorMensagem',msg+' A foto continua removida neste aparelho; tente novamente se necessário.',false);
+  else if(op.tipo==='community-create'||op.tipo==='community-edit'){
+    if(op.tipo==='community-edit'){
+      const editId=String(p.id||'');
+      [comunidadePublicaCache,comunidadeMeusPostsCache].forEach(function(lista){(Array.isArray(lista)?lista:[]).forEach(function(item){const iid=String(item&&item.id||'');const ireal=String(item&&item._postIdServidor||'');if(iid===editId||ireal===editId){item._editandoSync=false;item._preservarEdicaoAte=Date.now()+60000;}});});
+    }
+    comunidadeMensagem('comunidadeEditorMensagem',msg+' A publicação continua visível neste aparelho; tente salvar novamente se necessário.',false);
+  }
 }
 
 async function maptorkSyncProcessar(){
@@ -9253,6 +9387,7 @@ function maptorkSyncRestaurarVisuais(fila){
     else if(op.tipo==='update-save')maptorkAplicarAtualizacaoLocal(p);
     else if(op.tipo==='community-create')maptorkRestaurarPostComunidadePendente(p,false);
     else if(op.tipo==='community-edit')maptorkRestaurarPostComunidadePendente(p,true);
+    else if(op.tipo==='community-photo-delete')comunidadeAplicarExclusaoFotoLocal(p.postId||'',p.fotoId||'');
   });
 }
 
